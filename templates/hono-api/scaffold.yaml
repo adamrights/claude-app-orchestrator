@@ -1,0 +1,29 @@
+name: hono-api
+description: Standalone Hono API server with Drizzle ORM, PostgreSQL, and Zod validation. Deployable to Node, Bun, or edge runtimes.
+type: api
+
+provides:
+  framework: hono
+  language: typescript
+  orm: drizzle
+  database: postgresql
+  validation: zod
+
+dependencies:
+  production:
+    hono: "^4.5.0"
+    "@hono/node-server": "^1.12.0"
+    "@hono/zod-validator": "^0.2.2"
+    zod: "^3.23.0"
+    "drizzle-orm": "^0.33.0"
+    postgres: "^3.4.0"
+    "@paralleldrive/cuid2": "^2.2.2"
+  dev:
+    typescript: "^5.5.0"
+    "@types/node": "^20.14.0"
+    tsx: "^4.16.0"
+    "drizzle-kit": "^0.24.0"
+    vitest: "^2.0.0"
+
+post_scaffold:
+  - npm install

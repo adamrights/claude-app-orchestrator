@@ -1,0 +1,46 @@
+name: notes-api
+description: A standalone REST API for managing personal notes with tag support
+
+stack:
+  type: api
+  database: postgres
+
+models:
+  Note:
+    fields:
+      id: cuid
+      title: string
+      content: string
+      pinned: boolean @default(false)
+      createdAt: datetime @default(now())
+      updatedAt: datetime @default(now())
+      tags: NoteTag[]
+  Tag:
+    fields:
+      id: cuid
+      name: string @unique
+      notes: NoteTag[]
+  NoteTag:
+    fields:
+      id: cuid
+      note: Note @relation
+      tag: Tag @relation
+
+# No pages — this is API-only
+
+features:
+  - name: notes-crud
+    description: CRUD endpoints for notes with Zod validation (GET, POST, PATCH, DELETE)
+    skills: [api-design, database]
+
+  - name: tags
+    description: Tag management endpoints and many-to-many relationships with notes
+    skills: [api-design, database]
+
+  - name: search
+    description: Full-text search endpoint that filters notes by title, content, and tag name
+    skills: [api-design, database]
+
+  - name: tests
+    description: Integration tests covering CRUD, tagging, and search
+    skills: [react-testing]

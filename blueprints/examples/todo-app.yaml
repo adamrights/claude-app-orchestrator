@@ -1,0 +1,65 @@
+name: todo-app
+description: A simple todo list with GitHub OAuth authentication
+
+stack:
+  type: fullstack
+  database: postgres
+  auth: github
+
+models:
+  User:
+    fields:
+      id: cuid
+      email: string @unique
+      name: string?
+      todos: Todo[]
+  Todo:
+    fields:
+      id: cuid
+      title: string
+      completed: boolean @default(false)
+      author: User @relation
+      createdAt: datetime @default(now())
+
+pages:
+  - path: /
+    description: Landing page with sign-in button
+    auth: false
+  - path: /dashboard
+    description: Main todo list view — shows the user's todos with add/edit/delete/toggle
+    auth: true
+    features:
+      - list todos with filter (all / active / completed)
+      - add new todo via inline form
+      - toggle completion with checkbox
+      - delete todo with confirmation
+      - edit todo title inline
+
+# Execution mode (optional). Defaults to `auto`, which means the orchestrator
+# will run features in parallel when their dependencies allow it.
+execution: auto
+
+features:
+  - name: auth
+    description: GitHub OAuth login/logout with session management
+    skills: [authentication, react-hooks]
+
+  - name: todo-crud-api
+    description: REST API endpoints for creating, reading, updating, and deleting todos
+    skills: [api-design, database]
+    depends_on: [auth]   # CRUD endpoints check the session
+
+  - name: todo-list-ui
+    description: Dashboard page that lists todos with add/toggle/delete actions
+    skills: [react-component, react-hooks, state-management, styling]
+    depends_on: [todo-crud-api]
+
+  - name: todo-filters
+    description: Filter todos by status using URL search params
+    skills: [routing, state-management]
+    depends_on: [todo-list-ui]
+
+  - name: tests
+    description: Component tests for the todo list and integration tests for the API
+    skills: [react-testing]
+    # No explicit depends_on — auto-inferred to depend on all prior non-test features

@@ -1,0 +1,47 @@
+name: dashboard-spa
+description: A client-side analytics dashboard SPA that consumes an external API
+
+stack:
+  type: spa
+
+# No models — this is a pure client SPA, server data comes from VITE_API_URL
+
+pages:
+  - path: /
+    description: Login screen (redirects to dashboard if already logged in)
+    auth: false
+  - path: /dashboard
+    description: Main dashboard with metric cards and a chart
+    auth: true
+    features:
+      - show 4 metric cards (revenue, users, orders, conversion)
+      - line chart of revenue over the last 30 days
+      - date range selector
+  - path: /reports
+    description: Searchable, sortable table of reports
+    auth: true
+    features:
+      - paginated table with search
+      - column sorting
+      - row click navigates to detail view
+
+features:
+  - name: api-client
+    description: Typed API client wrapping fetch with auth header injection and error handling
+    skills: [react-hooks]
+
+  - name: auth-flow
+    description: Token-based auth with login screen, persisted token, and protected routes
+    skills: [routing, state-management]
+
+  - name: dashboard-ui
+    description: Dashboard page with metric cards and TanStack Query data fetching
+    skills: [react-component, state-management, styling]
+
+  - name: reports-table
+    description: Searchable, sortable, paginated reports table with URL-driven state
+    skills: [react-component, routing, state-management]
+
+  - name: tests
+    description: Component tests for cards and table interactions
+    skills: [react-testing]
