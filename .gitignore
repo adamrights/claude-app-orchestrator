@@ -3,3 +3,7 @@ node_modules/
 *.swp
 *.swo
 *~
+
+# Ralph loop runtime state (template is tracked, state/logs are not)
+.ralph/state.json
+.ralph/logs/
