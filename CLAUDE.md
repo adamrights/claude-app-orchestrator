@@ -16,7 +16,9 @@ The repo gives Claude agents two things: (1) coding **skills** to follow, and (2
   - `project-initializer.md` — Scaffolding specialist
   - `feature-builder.md` — Per-feature worker that runs in an isolated worktree (used by parallel waves)
   - `contract-designer.md` — Defines typed API contracts for layer-level parallel splits
+  - `contract-validator.md`, `shared-resource-arbitrator.md`, `migration-specialist.md` — Orchestration support
   - `react-feature-builder.md`, `api-endpoint-builder.md`, `fullstack-debugger.md`, `code-reviewer.md` — Feature specialists
+  - `integration-specialist.md`, `background-jobs-specialist.md`, `rbac-specialist.md` — Domain specialists (v2)
 - `blueprints/` — Declarative app specs (YAML) and examples
 - `templates/` — Starter project scaffolds referenced by blueprints
   - `nextjs-prisma-tailwind/` — Default fullstack template
