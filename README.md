@@ -7,7 +7,7 @@ The default stack is **Next.js + Prisma + Tailwind**, but additional templates a
 ## What's in the box
 
 - **`skills/`** — Coding guidelines that agents follow when writing code (React patterns, hooks, state management, API design, database, testing, etc.)
-- **`agents/`** — Agent definitions for the orchestrator, the per-feature worker, the contract designer, and feature specialists (React, API, debugger, code reviewer)
+- **`agents/`** — Agent definitions for the orchestrator, per-feature worker, contract designer, orchestration support (contract validator, shared-resource arbitrator, migration specialist), feature specialists (React, API, debugger, code reviewer), and domain specialists (integration, background jobs, RBAC)
 - **`blueprints/`** — Declarative app specs (YAML) and worked examples for fullstack, SPA, and API projects
 - **`templates/`** — Starter file trees for each app type, including a project-level `CLAUDE.md` that teaches Claude how to work in the new project
 - **`guides/`** — User-facing docs covering blueprint authoring, orchestrator usage, parallel execution, and how to extend the system
