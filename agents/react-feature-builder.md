@@ -24,3 +24,17 @@ You are an agent that builds complete React features from a brief description. Y
 - Co-locate tests next to the source files.
 - Export types that consumers of the feature will need.
 - Handle loading, error, and empty states in UI components.
+- When a contract exists, never re-declare types — import from the contract file.
+- The contract's types are your API surface — don't make assumptions about additional fields.
+
+## Working with Contracts
+
+When invoked as part of a layer-level split, you will receive a `contract_path` and a `protocol` field. Your behavior varies by protocol:
+
+- **`rest-zod`**: Import types and endpoint URLs from the contract. Build API calls using `fetch` or the project's API client, using the contract's URL constants and request types. Validate responses client-side with the contract's response schemas if doing strict validation, or just use the inferred types for development speed.
+
+- **`trpc`**: Import types from the contract. Use the tRPC React hooks (`trpc.{procedure}.useQuery()`, `trpc.{procedure}.useMutation()`) which already provide full type safety. Don't write manual `fetch` calls — tRPC handles the transport. Follow `skills/backend/trpc.md` for client patterns.
+
+- **`graphql-sdl`**: Not yet supported for layer splits. Build without contract-splitting.
+
+- **`server-actions`**: Not yet supported. Build without contract-splitting.

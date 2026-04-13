@@ -8,6 +8,7 @@
 - [Contract Designer](contract-designer.md) — Defines a typed API contract so frontend + backend can build in parallel
 - [Shared Resource Arbitrator](shared-resource-arbitrator.md) — Serializes writes to shared files (package.json, prisma schema, env) when parallel workers collide
 - [Migration Specialist](migration-specialist.md) — Generates and names database migrations after schema-mutating waves
+- [Contract Validator](contract-validator.md) — Validates contract completeness before dispatching parallel layer-split builders
 
 ## Feature Specialists
 

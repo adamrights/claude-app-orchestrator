@@ -205,13 +205,39 @@ For each agent you spawn:
 When a feature is marked splittable, run three sub-phases inside its wave slot:
 
 **Sub-Phase A — Contract Design** (1 agent, foreground, no worktree):
-- Spawn the Contract Designer agent (`agents/contract-designer.md`)
-- It writes `src/contracts/{feature.name}.ts` and commits to `main`
-- Wait for completion before Sub-Phase B
+
+Before spawning the Contract Designer, determine the protocol for this feature:
+
+1. If the feature entry has an explicit `protocol:` field, use it.
+2. Otherwise, read `{output_dir}/package.json` and infer:
+   - If `dependencies` or `devDependencies` contains `@trpc/server` → `trpc`
+   - If `dependencies` or `devDependencies` contains `@apollo/server` or `graphql` → `graphql-sdl` (stub — see fallback below)
+   - If the project uses Next.js App Router and the feature only touches server actions (no API routes in description) → `server-actions` (stub — see fallback below)
+   - Otherwise → `rest-zod`
+3. If the feature description mentions "tRPC" or "RPC" (case-insensitive), override to `trpc`.
+
+For stub protocols (`graphql-sdl`, `server-actions`): the Contract Designer will either fall back to `rest-zod` or recommend building without a layer split. If it recommends no layer split, treat the feature as a single-agent build and skip Sub-Phases A.5 through C.
+
+Spawn the Contract Designer agent (`agents/contract-designer.md`) with `protocol` in its inputs. It writes `src/contracts/{feature.name}.ts` and commits to `main`. Wait for completion before Sub-Phase A.5.
+
+**Sub-Phase A.5 — Contract Validation** (1 agent, foreground, read-only):
+
+After the Contract Designer completes, invoke the Contract Validator (`agents/contract-validator.md`). Pass it:
+- `contract_path` — the path from the Contract Designer's report
+- `protocol` — the protocol used
+- `feature` — the blueprint feature entry
+
+If the Contract Validator reports `status: valid`, proceed to Sub-Phase B.
+
+If the Contract Validator reports `status: invalid`:
+- **3 or fewer issues**: send the issues back to the Contract Designer and ask it to fix them. Re-run the Contract Validator once. If still invalid after the retry, fall back — build the feature as a single agent without a layer split (skip Sub-Phases B and C).
+- **More than 3 issues**: skip the layer split entirely. Build the feature as a single agent without a contract.
+
+When falling back to single-agent mode, spawn one Feature Builder with the full `feature.skills` (both frontend and backend skills) and no `contract_path`.
 
 **Sub-Phase B — Parallel Build** (2 agents, background, in worktrees):
-- Spawn one Feature Builder for the **backend** with `feature.skills` filtered to backend skills
-- Spawn one Feature Builder for the **frontend** with `feature.skills` filtered to frontend skills
+- Spawn one Feature Builder for the **backend** with `feature.skills` filtered to backend skills and `protocol: {protocol}` in its context
+- Spawn one Feature Builder for the **frontend** with `feature.skills` filtered to frontend skills and `protocol: {protocol}` in its context
 - Both get `contract_path: src/contracts/{feature.name}.ts` in their context
 - Both run in parallel worktrees
 - Wait for both to complete
@@ -320,6 +346,8 @@ When a feature references a skill by short name, resolve it to a file path:
 | `api-design` | `skills/backend/api-design.md` | backend |
 | `database` | `skills/backend/database.md` | backend |
 | `authentication` | `skills/backend/authentication.md` | backend |
+| `trpc` | `skills/backend/trpc.md` | backend |
+| `graphql` | `skills/backend/graphql.md` | backend |
 | `docker` | `skills/devops/docker.md` | devops |
 | `ci-cd` | `skills/devops/ci-cd.md` | devops |
 | `react-testing` | `skills/testing/react-testing.md` | testing |
@@ -341,6 +369,7 @@ If a feature references a skill not in this table, search `skills/` with Glob fo
   - Skill file not found → fix the skill mapping
   - Tests failed → run the Fullstack Debugger workflow
   - Contract mismatch (layer split) → re-run Contract Designer with a clearer prompt
+  - Contract validation failed → see Sub-Phase A.5 retry/fallback logic
   - File outside worktree → instruct the agent to retry
 - **Worktree merge conflict**: See Phase 2 Step 3. If unresolvable, stop and ask the user.
 - **Tests fail after merge**: Apply Fullstack Debugger before merging the next worktree. Don't paper over with skipped tests.
