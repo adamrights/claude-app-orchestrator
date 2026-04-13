@@ -25,7 +25,7 @@ go to `env.VITE_API_URL`.
 
 ## Conventions
 - Routes defined in `src/router.tsx`
-- Components in `src/components/`, pages in `src/pages/`
+- Components in `src/components/`, route components in route files under `src/router.tsx`
 - Use TanStack Query for all server data — never raw `useEffect` + `fetch`
 - Tailwind for styling — no CSS Modules or styled-components
 - Use the `@/` path alias for imports from `src/`
