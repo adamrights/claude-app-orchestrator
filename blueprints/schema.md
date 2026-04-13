@@ -192,7 +192,13 @@ You do NOT need `depends_on` for:
 
 ### Available skill short-names
 
-`react-component`, `react-hooks`, `state-management`, `styling`, `routing`, `api-design`, `database`, `authentication`, `docker`, `ci-cd`, `react-testing`, `e2e-testing`, `accessibility`
+**Frontend:** `react-component`, `react-hooks`, `state-management`, `styling`, `routing`, `error-handling`, `forms`, `accessibility`, `optimistic-updates`
+
+**Backend:** `api-design`, `database`, `authentication`, `trpc`, `graphql`, `validation`, `migrations`, `rate-limiting`
+
+**DevOps:** `docker`, `ci-cd`, `secrets`
+
+**Testing:** `react-testing`, `e2e-testing`
 
 See the orchestrator's skill mapping table in `agents/orchestrator.md` for paths.
 
