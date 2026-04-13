@@ -7,11 +7,20 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
     "db:push": "prisma db push",
-    "db:studio": "prisma studio"
+    "db:migrate:dev": "prisma migrate dev",
+    "db:reset": "prisma migrate reset",
+    "db:seed": "tsx prisma/seed.ts",
+    "db:studio": "prisma studio",
+    "prepare": "husky"
+  },
+  "prisma": {
+    "seed": "tsx prisma/seed.ts"
   },
   "dependencies": {
     "next": "^14.2.0",
@@ -20,6 +29,8 @@
     "@prisma/client": "^5.18.0",
     "next-auth": "^4.24.0",
     "@auth/prisma-adapter": "^2.4.0",
+    "@t3-oss/env-nextjs": "^0.11.0",
+    "server-only": "^0.0.1",
     "zod": "^3.23.0"
   },
   "devDependencies": {
@@ -31,12 +42,26 @@
     "tailwindcss": "^3.4.0",
     "postcss": "^8.4.0",
     "autoprefixer": "^10.4.0",
-    "eslint": "^8.57.0",
+    "eslint": "^9.9.0",
+    "@eslint/eslintrc": "^3.1.0",
     "eslint-config-next": "^14.2.0",
+    "prettier": "^3.3.0",
+    "husky": "^9.1.0",
+    "lint-staged": "^15.2.0",
+    "tsx": "^4.16.0",
     "vitest": "^2.0.0",
     "@testing-library/react": "^16.0.0",
     "@testing-library/jest-dom": "^6.4.0",
     "@vitejs/plugin-react": "^4.3.0",
     "jsdom": "^24.1.0"
+  },
+  "lint-staged": {
+    "*.{ts,tsx,js,jsx}": [
+      "prettier --write",
+      "eslint --fix"
+    ],
+    "*.{json,md,css}": [
+      "prettier --write"
+    ]
   }
 }

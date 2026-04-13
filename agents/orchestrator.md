@@ -20,9 +20,10 @@ If any of these are missing, ask the user before proceeding.
 ## Phases
 
 ```
-Phase 0: Plan execution graph        (NEW — dependency inference + wave assignment)
+Phase 0: Plan execution graph        (dependency inference + wave assignment)
 Phase 1: Scaffold                    (always sequential)
 Phase 2: Build features wave-by-wave (parallel within each wave)
+Phase 2.5: Arbitrated merge          (serialize shared-resource writes, run migrations)
 Phase 3: Integration & review        (sequential)
 ```
 
@@ -31,6 +32,29 @@ Phase 3: Integration & review        (sequential)
 ## Phase 0: Plan Execution Graph
 
 This phase decides whether features run in parallel and groups them into "waves" — sets of features that can run simultaneously.
+
+### Step 0: Shared Resource Registry
+
+Before computing waves, establish the list of files that must never be modified concurrently by two workers. These are the **shared resources**: any feature touching one of them has to be serialized against other touchers, or routed through the Shared Resource Arbitrator (see Phase 2.5).
+
+The default registry is:
+
+```
+Shared files (any feature touching these must be serialized or routed through the arbitrator):
+- src/lib/utils.ts and any src/lib/*.ts utility modules
+- prisma/schema.prisma
+- src/db/schema.ts
+- package.json
+- tsconfig.json
+- .env, .env.local, .env.example
+- next.config.js / vite.config.ts / drizzle.config.ts
+- middleware.ts (Next.js global middleware)
+- src/app/layout.tsx (Next.js root layout)
+- src/app/providers.tsx (React context providers)
+- src/i18n/*.json (translation catalogs)
+```
+
+A blueprint may extend this list via a top-level `shared_resources:` array. Always treat the union of the default list and the blueprint extension as the active registry. Print the active registry before wave computation so the user can see what is being guarded.
 
 ### Step 1: Read execution mode
 
@@ -49,8 +73,11 @@ For each pair of features (A, B) where B comes after A in the blueprint, B **dep
 4. **Page overlap**: Both A and B name the same page path in their `description` or in any `pages[].features` references. B depends on A.
 5. **Test → impl**: A's name contains `test` (or its `skills` include `react-testing` / `e2e-testing`). Then A depends on every prior non-test feature. (This means tests run last in their own wave.)
 6. **Schema migration order**: A and B both touch the `models` section by name. B depends on A. (Prevents two agents racing on `prisma/schema.prisma`.)
+7. **Shared resource collision**: If two features both declare `touches:` globs that intersect (or both touch a file in the Shared Resource Registry), the later-declared feature depends on the earlier one. If that would produce a cycle or bloat a wave past 4 agents, route both through the Shared Resource Arbitrator post-wave (see Phase 2.5) instead of serializing.
 
 Build the resulting dependency graph as `{featureName: [list of featureNames it depends on]}`.
+
+Note: Rule 7 requires each feature to have a `touches:` manifest. In `execution: auto` mode, the orchestrator reads the manifest from the blueprint feature entry if present. Otherwise, it prompts the Feature Builder for its kickoff declaration (see `agents/feature-builder.md`) before spawning the full wave and uses that manifest for arbitration.
 
 ### Step 3: Detect cycles
 
@@ -203,12 +230,20 @@ For each completed worktree, in declaration order:
 
 1. `cd {output_dir}`
 2. `git merge {branch_name}` (with `--no-ff` to preserve history)
-3. **If a conflict occurs**:
-   - Read each conflicting file
-   - For new files: take both sides
-   - For modified files: try to combine additive changes
-   - For genuine logic conflicts: prefer the version from the feature listed first in the blueprint, then re-test
-   - If you cannot resolve a conflict cleanly, stop and ask the user
+3. **If a conflict occurs**, apply the **Merge Decision Table** below. Do NOT guess — each file pattern has an explicit rule:
+
+   | File pattern | Merge strategy |
+   |---|---|
+   | `package.json` (dependencies, devDependencies) | Union of all keys; on version conflict, take the highest semver |
+   | `package.json` (scripts) | Union; on key collision, ABORT and ask the user |
+   | `prisma/schema.prisma` | Model-level merge — each wave worker must add whole models; field-level edits on an existing model = ABORT |
+   | `src/db/schema.ts` (Drizzle) | Same as Prisma: table-level merge, ABORT on field-level collision |
+   | `src/lib/*.ts` | Must use namespaced re-exports — workers add `export * from './feature-x-utils'`; new files preferred over editing existing utils |
+   | `.env*` | Union; on key collision, ABORT |
+   | `tsconfig.json` | Must not be touched by features; only by project-initializer |
+   | Any other file | Prefer additive merge; on logic conflict, ABORT and ask the user |
+
+   When the table says **ABORT**, stop merging, leave the worktrees untouched, and ask the user how to resolve. Do not fall back to "prefer the version from the feature listed first" — that rule is retired because it silently drops work.
 4. After merging, run `npm test`. If tests fail, apply Fullstack Debugger workflow before merging the next worktree.
 5. Clean up the worktree: the Agent tool's `isolation: worktree` mode handles this automatically when the agent exits, but verify with `git worktree list`.
 
@@ -221,6 +256,41 @@ git commit --allow-empty -m "feat(wave-{n}): {comma-separated feature names}"
 ```
 
 This creates a single commit per wave so the user can see waves at a glance with `git log --oneline`.
+
+---
+
+## Phase 2.5: Arbitrated Merge
+
+This phase runs **between** parallel worker completion (Phase 2 Step 1/2) and the wave merge (Phase 2 Step 3) whenever 2+ workers in the just-finished wave touched the same file in the Shared Resource Registry.
+
+### Step 1: Detect shared-resource collisions
+
+Collect every completed worker's reported `touches.modify` list from their FEATURE BUILDER REPORT. For each file that appears in 2+ reports AND is in the Shared Resource Registry, mark it as **contested**.
+
+If no files are contested, skip Phase 2.5 entirely and proceed to the normal wave merge.
+
+### Step 2: Invoke the Shared Resource Arbitrator
+
+For each contested file (or as one batch for the whole wave), spawn the Shared Resource Arbitrator agent defined at `agents/shared-resource-arbitrator.md`. Pass it:
+
+- `wave_number`
+- `contested_files` — list of file paths
+- `workers` — list of `{feature_name, branch_name, worktree_path}` for every worker that touched a contested file
+- `registry` — the active Shared Resource Registry
+
+The arbitrator reads the base version of each contested file from `main` and each worker's proposed version from its branch, applies the Merge Decision Table, writes a single merged version to `main`, and commits as `chore: arbitrated merge of {file} for wave-{n}`.
+
+### Step 3: Resume the wave merge
+
+After the arbitrator reports success, proceed with Phase 2 Step 3 (`git merge {branch_name}`). Because the arbitrated files are now on `main` in a canonical form, the subsequent branch merges should either be no-ops on those files or trivially resolvable — git sees the arbitrated content as the common ancestor.
+
+If the arbitrator reports that any file required user resolution (the decision table said ABORT), stop the wave, surface the arbitrator's report to the user, and do not merge any of the wave's branches until the user decides.
+
+### Step 4: Migration Specialist
+
+After any wave that mutated `models` (i.e., at least one worker's `touches.modify` includes `prisma/schema.prisma` or `src/db/schema.ts`), invoke the Migration Specialist defined at `agents/migration-specialist.md` to generate and name a Prisma/Drizzle migration reflecting all model changes in that wave. Pass it the wave number, the list of changed model names, and a one-line description of the changes assembled from the workers' reports.
+
+The Migration Specialist is a post-merge step: it runs after Phase 2.5 Step 3 so it operates against the final merged schema on `main`.
 
 ---
 

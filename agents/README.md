@@ -6,6 +6,8 @@
 - [Project Initializer](project-initializer.md) — Scaffolds a new project from a template (Phase 1 specialist)
 - [Feature Builder](feature-builder.md) — Worker agent that builds a single feature in an isolated worktree (used by parallel waves)
 - [Contract Designer](contract-designer.md) — Defines a typed API contract so frontend + backend can build in parallel
+- [Shared Resource Arbitrator](shared-resource-arbitrator.md) — Serializes writes to shared files (package.json, prisma schema, env) when parallel workers collide
+- [Migration Specialist](migration-specialist.md) — Generates and names database migrations after schema-mutating waves
 
 ## Feature Specialists
 
