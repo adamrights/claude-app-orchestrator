@@ -9,6 +9,8 @@ Blueprints are YAML files that declaratively describe an app to be built. The or
   - [todo-app.yaml](examples/todo-app.yaml) — Fullstack todo app (default Next.js template)
   - [dashboard-spa.yaml](examples/dashboard-spa.yaml) — Client-side dashboard SPA (Vite template)
   - [notes-api.yaml](examples/notes-api.yaml) — Standalone notes API (Hono template)
+  - [saas-platform.yaml](examples/saas-platform.yaml) — Multi-tenant SaaS with RBAC, billing, jobs (v2 schema)
+  - [webhook-integration.yaml](examples/webhook-integration.yaml) — Webhook relay/processor API (v2 schema)
 
 ## How to use
 

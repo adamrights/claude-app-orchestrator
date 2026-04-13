@@ -1,0 +1,72 @@
+version: 2
+name: webhook-relay
+description: A lightweight webhook receiver and processor that ingests events from GitHub and Stripe, processes them asynchronously, and sends notification emails
+
+stack:
+  type: api
+  database: postgres
+
+integrations:
+  - service: resend
+    purpose: send notification emails when events are processed
+    env_vars: [RESEND_API_KEY]
+    sdk: resend
+
+webhooks:
+  - source: github
+    event: push
+    path: /api/webhooks/github
+    description: Receive push events and store them for processing
+    skills: [api-design, database]
+  - source: stripe
+    event: checkout.session.completed
+    path: /api/webhooks/stripe
+    description: Receive checkout events and store them for processing
+    skills: [api-design, database]
+
+jobs:
+  - name: process-events
+    trigger: queue
+    queue: webhook-events
+    description: Process queued webhook events — validate payloads, apply business logic, and mark as processed
+    skills: [api-design, database]
+
+models:
+  WebhookEvent:
+    fields:
+      id: cuid
+      source: string
+        validation: z.enum(["github", "stripe"])
+      event: string
+        validation: z.string().min(1)
+      payload: string
+      status: string @default(pending)
+        validation: z.enum(["pending", "processing", "processed", "failed"])
+      receivedAt: datetime @default(now())
+
+  ProcessedEvent:
+    fields:
+      id: cuid
+      webhookEvent: WebhookEvent @relation
+      result: string
+      processedAt: datetime @default(now())
+      notificationSent: boolean @default(false)
+
+features:
+  - name: webhook-receiver
+    description: Route handlers that verify signatures, parse payloads, and enqueue events for processing
+    skills: [api-design, database]
+
+  - name: event-processor
+    description: Queue consumer that processes webhook events and writes results to ProcessedEvent
+    skills: [api-design, database]
+    depends_on: [webhook-receiver]
+
+  - name: notification-sender
+    description: Send email notifications via Resend when high-priority events are processed
+    skills: [api-design]
+    depends_on: [event-processor]
+
+  - name: tests
+    description: Integration tests for webhook signature verification, event processing, and notification delivery
+    skills: [e2e-testing]

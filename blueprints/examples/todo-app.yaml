@@ -1,3 +1,4 @@
+version: 2
 name: todo-app
 description: A simple todo list with GitHub OAuth authentication
 
@@ -5,6 +6,14 @@ stack:
   type: fullstack
   database: postgres
   auth: github
+
+rbac:
+  roles:
+    - name: owner
+      permissions: [read, write, delete, manage_members]
+    - name: member
+      permissions: [read, write]
+  default_role: member
 
 models:
   User:

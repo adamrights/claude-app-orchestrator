@@ -17,13 +17,22 @@ When invoked, you should know:
 
 If any of these are missing, ask the user before proceeding.
 
+## Blueprint Version Detection
+
+Before any other work, check the blueprint's `version` field:
+
+- **Missing or `1`**: This is a v1 blueprint. Skip all v2 sections (`integrations`, `jobs`, `webhooks`, `tenancy`, `rbac`, `flags`, `shared`, `config`). Process only `models`, `pages`, and `features` as before. Apply the v1 shim — treat the blueprint as if those sections do not exist.
+- **`2`**: This is a v2 blueprint. Process all sections described below.
+
 ## Phases
 
 ```
 Phase 0: Plan execution graph        (dependency inference + wave assignment)
 Phase 1: Scaffold                    (always sequential)
+Phase 1.5: Integrations              (v2 — wire up third-party SDKs)
 Phase 2: Build features wave-by-wave (parallel within each wave)
 Phase 2.5: Arbitrated merge          (serialize shared-resource writes, run migrations)
+Phase 2.7: Jobs & webhooks           (v2 — background tasks and inbound hooks)
 Phase 3: Integration & review        (sequential)
 ```
 
@@ -137,8 +146,13 @@ Always sequential. No changes from the original workflow.
    - Fullstack template → write `prisma/schema.prisma`
    - API template → write `src/db/schema.ts` (Drizzle)
    - SPA template → skip (no database)
-7. Run the post-scaffold commands listed in `scaffold.yaml` (typically `npm install`, `npx prisma generate`).
-8. Initialize git: `git init && git add -A && git commit -m "chore: scaffold from {template}"`
+7. **Generate config and flags modules** (v2 only):
+   - If the blueprint has a `config:` section, generate a typed config module at `src/lib/config.ts` that reads from env vars with per-environment defaults. Add the config env vars to `.env.example`.
+   - If the blueprint has a `flags:` section:
+     - For `provider: env`, generate a typed flags module at `src/lib/flags.ts` that reads `FLAG_{NAME}` env vars and exports typed boolean accessors. Add the flag env vars to `.env.example`.
+     - For external providers (`statsig`, `launchdarkly`, `unleash`), generate a flags module that wraps the provider's SDK. Add the provider to the integration pipeline (Phase 1.5).
+8. Run the post-scaffold commands listed in `scaffold.yaml` (typically `npm install`, `npx prisma generate`).
+9. Initialize git: `git init && git add -A && git commit -m "chore: scaffold from {template}"`
 
 ### Template Resolution Rules
 
@@ -150,6 +164,46 @@ Apply in order; first match wins:
    - `spa` → `vite-react-tailwind`
    - `api` → `hono-api`
 3. If `stack.type` is missing or unrecognized, default to `nextjs-prisma-tailwind`.
+
+---
+
+## Phase 1.5: Integrations (v2 only)
+
+If the blueprint has an `integrations:` section, process each integration entry through the Integration Specialist (`agents/integration-specialist.md`) BEFORE any feature waves. Integrations can run in parallel if they are independent (they typically are — each installs a different SDK and writes to a different file).
+
+For each integration entry:
+1. Invoke the Integration Specialist with the entry's `service`, `purpose`, `env_vars`, and `sdk`.
+2. The specialist installs the SDK, creates the typed client wrapper, and wires up env vars.
+3. Each integration results in its own commit.
+
+After all integrations complete, run `npm run build` (or `npx tsc --noEmit`) to verify everything compiles before moving to feature waves.
+
+---
+
+## Pre-Wave: Shared Primitives (v2 only)
+
+If the blueprint has a `shared:` section, build each shared entry BEFORE any feature wave (conceptually Wave -1). Process shared entries sequentially — they may depend on each other.
+
+For each shared entry:
+1. Load the skills listed in its `skills` array.
+2. Pick the appropriate specialist workflow (same logic as feature building).
+3. Build the shared primitive.
+4. Run tests.
+5. Commit: `feat(shared): {name}`
+
+Shared primitives go into common locations (`src/components/ui/`, `src/lib/`, etc.) so all features can import them.
+
+---
+
+## RBAC Dispatch (v2 only)
+
+If the blueprint has an `rbac:` section, invoke the RBAC Specialist (`agents/rbac-specialist.md`) in Wave 0, before features that need authorization. Pass it:
+- `rbac` — the full RBAC config
+- `tenancy` — the tenancy config, if present
+
+The RBAC Specialist generates the permissions module, authorization middleware, and role utilities. This runs as part of Wave 0 so that subsequent features can import and use the permission checks.
+
+If `tenancy:` also exists, the RBAC Specialist scopes all permission checks to the current tenant (organization, workspace, etc.). The orchestrator generates the tenant model during schema generation (Phase 1 Step 6) and adds `orgId` foreign keys to tenant-scoped models.
 
 ---
 
@@ -320,6 +374,32 @@ The Migration Specialist is a post-merge step: it runs after Phase 2.5 Step 3 so
 
 ---
 
+## Phase 2.7: Jobs & Webhooks (v2 only)
+
+This phase runs after all feature waves complete but before Phase 3 (Integration & Review).
+
+### Jobs
+
+If the blueprint has a `jobs:` section, invoke the Background Jobs Specialist (`agents/background-jobs-specialist.md`) for each job entry. Jobs can run in parallel if they are independent (different queues, different schedules). Each job results in its own commit.
+
+For each job:
+1. Pass the job entry (`name`, `trigger`, `schedule`/`queue`, `description`, `skills`) to the Background Jobs Specialist.
+2. The specialist detects or installs a job framework, creates the handler, and registers the trigger.
+
+### Webhooks
+
+If the blueprint has a `webhooks:` section, treat each webhook as a mini-feature:
+1. Load the skills listed in the webhook's `skills` array.
+2. Build a route handler at the webhook's `path` with:
+   - Signature verification for the source service (e.g., Stripe webhook signature, GitHub HMAC)
+   - Payload parsing and validation
+   - Business logic described in the webhook's `description`
+3. If the source matches an integration entry, import the client from `src/integrations/` for verification helpers.
+4. Run tests.
+5. Commit: `feat(webhook): {source}-{event}`
+
+---
+
 ## Phase 3: Integration & Review
 
 Same as before, always sequential:
@@ -343,13 +423,21 @@ When a feature references a skill by short name, resolve it to a file path:
 | `state-management` | `skills/frontend/state-management.md` | frontend |
 | `styling` | `skills/frontend/styling.md` | frontend |
 | `routing` | `skills/frontend/routing.md` | frontend |
+| `error-handling` | `skills/frontend/error-handling.md` | frontend |
+| `forms` | `skills/frontend/forms.md` | frontend |
+| `accessibility` | `skills/frontend/accessibility.md` | frontend |
+| `optimistic-updates` | `skills/frontend/optimistic-updates.md` | frontend |
 | `api-design` | `skills/backend/api-design.md` | backend |
 | `database` | `skills/backend/database.md` | backend |
 | `authentication` | `skills/backend/authentication.md` | backend |
 | `trpc` | `skills/backend/trpc.md` | backend |
 | `graphql` | `skills/backend/graphql.md` | backend |
+| `validation` | `skills/backend/validation.md` | backend |
+| `migrations` | `skills/backend/migrations.md` | backend |
+| `rate-limiting` | `skills/backend/rate-limiting.md` | backend |
 | `docker` | `skills/devops/docker.md` | devops |
 | `ci-cd` | `skills/devops/ci-cd.md` | devops |
+| `secrets` | `skills/devops/secrets.md` | devops |
 | `react-testing` | `skills/testing/react-testing.md` | testing |
 | `e2e-testing` | `skills/testing/e2e-testing.md` | testing |
 
@@ -374,6 +462,9 @@ If a feature references a skill not in this table, search `skills/` with Glob fo
 - **Worktree merge conflict**: See Phase 2 Step 3. If unresolvable, stop and ask the user.
 - **Tests fail after merge**: Apply Fullstack Debugger before merging the next worktree. Don't paper over with skipped tests.
 - **`npm run build` fails in Phase 3**: Trace the build error to its root cause and fix.
+- **Integration Specialist fails**: Check that the SDK package name is correct and exists on npm. If the SDK requires peer dependencies, install those too. Retry once before asking the user.
+- **Background Jobs Specialist fails**: Verify the job framework is compatible with the project's runtime (e.g., BullMQ needs Redis, Inngest needs a serve endpoint). If the framework detection chose wrong, override with an explicit framework and retry.
+- **RBAC Specialist fails**: Check for naming conflicts between generated permission/role types and existing code. If tenancy scoping causes type errors, verify the tenant model was generated correctly in Phase 1.
 
 ---
 

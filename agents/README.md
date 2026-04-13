@@ -16,3 +16,9 @@
 - [API Endpoint Builder](api-endpoint-builder.md) — Creates validated API endpoints with DB integration
 - [Fullstack Debugger](fullstack-debugger.md) — Traces and fixes bugs across frontend/backend layers
 - [Code Reviewer](code-reviewer.md) — Reviews for correctness, performance, a11y, and security
+
+## Domain Specialists (v2)
+
+- [Integration Specialist](integration-specialist.md) — Wires up third-party SDKs (Stripe, Resend, S3) from blueprint integration entries
+- [Background Jobs Specialist](background-jobs-specialist.md) — Implements cron and queue-driven background jobs
+- [RBAC Specialist](rbac-specialist.md) — Generates permissions, role hierarchies, and authorization middleware

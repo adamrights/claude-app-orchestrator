@@ -1,0 +1,212 @@
+version: 2
+name: taskflow
+description: A multi-tenant project management tool with team collaboration, billing, and notifications
+
+stack:
+  type: fullstack
+  database: postgres
+  auth: github
+
+tenancy:
+  model: organization
+  isolation: row-level
+  fields:
+    name: string
+    slug: string @unique
+    plan: string @default(free)
+  user_relation: many-to-many
+
+rbac:
+  roles:
+    - name: owner
+      permissions: [manage_org, manage_members, manage_billing, read, write, delete]
+    - name: admin
+      permissions: [manage_members, read, write, delete]
+    - name: member
+      permissions: [read, write]
+    - name: viewer
+      permissions: [read]
+  default_role: member
+
+integrations:
+  - service: stripe
+    purpose: subscription billing and usage metering
+    env_vars: [STRIPE_SECRET_KEY, STRIPE_WEBHOOK_SECRET]
+    sdk: stripe
+  - service: resend
+    purpose: transactional email (invitations, digests, notifications)
+    env_vars: [RESEND_API_KEY]
+    sdk: resend
+
+jobs:
+  - name: send-weekly-digest
+    trigger: cron
+    schedule: "0 9 * * 1"
+    description: Email each user a summary of their organization's activity for the week
+    skills: [api-design]
+
+webhooks:
+  - source: stripe
+    event: checkout.session.completed
+    path: /api/webhooks/stripe
+    description: Activate the paid plan after a successful checkout
+    skills: [api-design, database]
+
+flags:
+  provider: env
+  flags:
+    - name: new_dashboard
+      description: Show redesigned project dashboard with timeline view
+      default: false
+    - name: ai_task_suggestions
+      description: Suggest task breakdowns using AI when creating a project
+      default: false
+
+shared:
+  - name: design-system
+    description: Button, Input, Card, Modal, Avatar base components with Tailwind variants
+    skills: [react-component, styling, accessibility]
+  - name: api-client
+    description: Typed fetch wrapper with auth header injection, org scoping, and error handling
+    skills: [react-hooks]
+
+config:
+  environments: [development, staging, production]
+  vars:
+    API_RATE_LIMIT:
+      development: 1000
+      staging: 100
+      production: 50
+    ENABLE_DEBUG_LOGGING:
+      development: true
+      staging: true
+      production: false
+
+models:
+  Organization:
+    fields:
+      id: cuid
+      name: string
+        validation: z.string().min(1).max(100)
+      slug: string @unique
+        validation: z.string().regex(/^[a-z0-9-]+$/).min(3).max(50)
+      plan: string @default(free)
+      members: Membership[]
+      projects: Project[]
+      createdAt: datetime @default(now())
+
+  User:
+    fields:
+      id: cuid
+      email: string @unique
+        validation: z.string().email()
+      name: string
+        validation: z.string().min(1).max(100)
+      avatarUrl: string?
+      memberships: Membership[]
+
+  Membership:
+    fields:
+      id: cuid
+      user: User @relation
+      organization: Organization @relation
+      role: string @default(member)
+      joinedAt: datetime @default(now())
+
+  Project:
+    fields:
+      id: cuid
+      name: string
+        validation: z.string().min(1).max(200)
+      description: string?
+      organization: Organization @relation
+      tasks: Task[]
+      createdAt: datetime @default(now())
+
+  Task:
+    fields:
+      id: cuid
+      title: string
+        validation: z.string().min(1).max(500)
+      description: string?
+      status: string @default(todo)
+        validation: z.enum(["todo", "in_progress", "done"])
+      priority: string @default(medium)
+        validation: z.enum(["low", "medium", "high", "urgent"])
+      assignee: User? @relation
+      project: Project @relation
+      createdAt: datetime @default(now())
+
+pages:
+  - path: /
+    description: Marketing landing page with sign-in button
+    auth: false
+  - path: /dashboard
+    description: Organization dashboard showing recent projects and activity
+    auth: true
+    features:
+      - list recent projects
+      - activity feed
+      - quick-create project
+  - path: /projects
+    description: All projects for the current organization with search and filter
+    auth: true
+    features:
+      - project list with search
+      - create project dialog
+  - path: /projects/[id]
+    description: Project detail with task board (kanban columns for todo/in-progress/done)
+    auth: true
+    features:
+      - task board with drag-and-drop
+      - create task inline
+      - task detail sidebar
+      - assign task to member
+  - path: /settings
+    description: Organization settings — members, billing, and general config
+    auth: true
+    features:
+      - member management (invite, remove, change role)
+      - billing portal link
+      - org name and slug editing
+
+execution: auto
+
+features:
+  - name: auth
+    description: GitHub OAuth login/logout with session management and org context
+    skills: [authentication, react-hooks]
+
+  - name: org-setup
+    description: Organization creation, slug routing, and membership management
+    skills: [api-design, database, react-component]
+    depends_on: [auth]
+
+  - name: project-crud
+    description: Create, read, update, and delete projects scoped to the current organization
+    skills: [api-design, database, react-component, state-management]
+    depends_on: [org-setup]
+
+  - name: task-crud
+    description: Task CRUD with status transitions, priority, and assignment within a project
+    skills: [api-design, database, react-component, state-management, styling]
+    depends_on: [project-crud]
+
+  - name: task-board
+    description: Kanban board UI with drag-and-drop between status columns
+    skills: [react-component, react-hooks, state-management, styling]
+    depends_on: [task-crud]
+
+  - name: billing
+    description: Stripe Checkout integration for plan upgrades and a billing portal link
+    skills: [api-design, react-component]
+    depends_on: [org-setup]
+
+  - name: notifications
+    description: Email notifications for task assignments and org invitations via Resend
+    skills: [api-design]
+    depends_on: [task-crud, org-setup]
+
+  - name: tests
+    description: Component tests for the task board, integration tests for project and task APIs
+    skills: [react-testing, e2e-testing]
