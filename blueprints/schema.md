@@ -192,9 +192,9 @@ You do NOT need `depends_on` for:
 
 ### Available skill short-names
 
-**Frontend:** `react-component`, `react-hooks`, `state-management`, `styling`, `routing`, `error-handling`, `forms`, `accessibility`, `optimistic-updates`
+**Frontend:** `react-component`, `react-hooks`, `state-management`, `styling`, `routing`, `error-handling`, `forms`, `accessibility`, `optimistic-updates`, `data-fetching`, `data-tables`, `pagination`, `performance`
 
-**Backend:** `api-design`, `database`, `authentication`, `trpc`, `graphql`, `validation`, `migrations`, `rate-limiting`
+**Backend:** `api-design`, `database`, `authentication`, `trpc`, `graphql`, `validation`, `migrations`, `rate-limiting`, `search`, `caching`
 
 **DevOps:** `docker`, `ci-cd`, `secrets`
 

@@ -9,3 +9,7 @@
 - [Forms](forms.md) — React Hook Form + Zod, validation, multi-step forms
 - [Accessibility](accessibility.md) — Semantic HTML, ARIA, keyboard nav, screen readers
 - [Optimistic Updates](optimistic-updates.md) — Instant UI updates with rollback on error
+- [Data Fetching](data-fetching.md) — TanStack Query patterns, mutations, invalidation
+- [Data Tables](data-tables.md) — TanStack Table + TanStack Query, URL-state, server pagination
+- [Pagination](pagination.md) — Cursor vs offset, infinite scroll, URL state
+- [Performance](performance.md) — Code splitting, virtualization, memoization, bundle size

@@ -8,3 +8,5 @@
 - [Validation](validation.md) — Zod schemas, input validation, sanitization
 - [Migrations](migrations.md) — Prisma and Drizzle migration workflows
 - [Rate Limiting](rate-limiting.md) — API protection, throttling, 429 responses
+- [Search](search.md) — Postgres FTS, Meilisearch, typo tolerance, faceting
+- [Caching](caching.md) — Redis, HTTP headers, CDN, invalidation strategies

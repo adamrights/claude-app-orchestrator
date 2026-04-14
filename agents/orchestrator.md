@@ -214,7 +214,13 @@ If `tenancy:` also exists, the RBAC Specialist scopes all permission checks to t
 If Phase 0 chose sequential mode, process features one at a time as in the original workflow:
 
 1. Load relevant skills from the Skill Mapping table
-2. Pick the specialist workflow (react-feature-builder for UI, api-endpoint-builder for backend)
+2. Pick the specialist workflow using these rules (first match wins):
+   - Feature mentions "data table", "admin list", "searchable list", or "paginated list of X" → **Data Table Builder** (`agents/data-table-builder.md`)
+   - Feature mentions "dashboard", "overview page", "metrics", "KPI", or "analytics" → **Dashboard Builder** (`agents/dashboard-builder.md`)
+   - Feature mentions "admin panel", "manage X", "CRUD for X", or is clearly a resource management UI → **Admin Panel Builder** (`agents/admin-panel-builder.md`)
+   - Feature is a UI component, page, or hook → **React Feature Builder** (`agents/react-feature-builder.md`)
+   - Feature is an API route, database query, or server logic → **API Endpoint Builder** (`agents/api-endpoint-builder.md`)
+   - Feature spans both layers → build API first then UI, OR use layer-level split if it's marked splittable
 3. Build, test, commit
 4. Move to the next feature
 
@@ -427,6 +433,10 @@ When a feature references a skill by short name, resolve it to a file path:
 | `forms` | `skills/frontend/forms.md` | frontend |
 | `accessibility` | `skills/frontend/accessibility.md` | frontend |
 | `optimistic-updates` | `skills/frontend/optimistic-updates.md` | frontend |
+| `data-tables` | `skills/frontend/data-tables.md` | frontend |
+| `pagination` | `skills/frontend/pagination.md` | frontend |
+| `data-fetching` | `skills/frontend/data-fetching.md` | frontend |
+| `performance` | `skills/frontend/performance.md` | frontend |
 | `api-design` | `skills/backend/api-design.md` | backend |
 | `database` | `skills/backend/database.md` | backend |
 | `authentication` | `skills/backend/authentication.md` | backend |
@@ -435,6 +445,8 @@ When a feature references a skill by short name, resolve it to a file path:
 | `validation` | `skills/backend/validation.md` | backend |
 | `migrations` | `skills/backend/migrations.md` | backend |
 | `rate-limiting` | `skills/backend/rate-limiting.md` | backend |
+| `search` | `skills/backend/search.md` | backend |
+| `caching` | `skills/backend/caching.md` | backend |
 | `docker` | `skills/devops/docker.md` | devops |
 | `ci-cd` | `skills/devops/ci-cd.md` | devops |
 | `secrets` | `skills/devops/secrets.md` | devops |

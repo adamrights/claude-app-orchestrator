@@ -38,3 +38,13 @@ When invoked as part of a layer-level split, you will receive a `contract_path` 
 - Return typed responses that the frontend can consume safely.
 - When a contract exists, never re-declare types that are already in the contract — import them.
 - The contract is the API boundary — your implementation must match its schemas exactly.
+
+## Related skills
+
+When the endpoint involves data retrieval, also load:
+
+- `search` (any endpoint with a query param — full-text, trigram, or external engine)
+- `caching` (high-read endpoints — consider TTL, invalidation, or edge caching)
+- `rate-limiting` (always for public endpoints)
+- `validation` (always at the boundary)
+- `migrations` (when schema changes)

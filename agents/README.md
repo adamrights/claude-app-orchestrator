@@ -22,3 +22,9 @@
 - [Integration Specialist](integration-specialist.md) — Wires up third-party SDKs (Stripe, Resend, S3) from blueprint integration entries
 - [Background Jobs Specialist](background-jobs-specialist.md) — Implements cron and queue-driven background jobs
 - [RBAC Specialist](rbac-specialist.md) — Generates permissions, role hierarchies, and authorization middleware
+
+## Data-Heavy App Specialists
+
+- [Data Table Builder](data-table-builder.md) — Searchable/sortable/paginated tables with URL state
+- [Dashboard Builder](dashboard-builder.md) — Metric cards, charts, date-range dashboards
+- [Admin Panel Builder](admin-panel-builder.md) — Admin CRUD views with RBAC, bulk actions
