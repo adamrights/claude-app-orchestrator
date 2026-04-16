@@ -215,6 +215,9 @@ If Phase 0 chose sequential mode, process features one at a time as in the origi
 
 1. Load relevant skills from the Skill Mapping table
 2. Pick the specialist workflow using these rules (first match wins):
+   - Feature mentions "design system", "ui kit", "primitives", "shadcn", or is the *first* UI feature in a multi-page app → **Design System Builder** (`agents/design-system-builder.md`) — scaffolds Radix + Tailwind + CVA primitives that subsequent specialists compose from.
+   - Feature mentions "server component", "RSC", "server action", "streaming", or is an App Router page on a Next.js fullstack project that should default to server rendering → **RSC Architect** (`agents/rsc-architect.md`)
+   - Feature mentions "audit performance", "fix LCP/INP/CLS", "optimize bundle", or is a perf review pass → **React Performance Auditor** (`agents/react-performance-auditor.md`)
    - Feature mentions "data table", "admin list", "searchable list", or "paginated list of X" → **Data Table Builder** (`agents/data-table-builder.md`)
    - Feature mentions "dashboard", "overview page", "metrics", "KPI", or "analytics" → **Dashboard Builder** (`agents/dashboard-builder.md`)
    - Feature mentions "admin panel", "manage X", "CRUD for X", or is clearly a resource management UI → **Admin Panel Builder** (`agents/admin-panel-builder.md`)
@@ -437,6 +440,14 @@ When a feature references a skill by short name, resolve it to a file path:
 | `pagination` | `skills/frontend/pagination.md` | frontend |
 | `data-fetching` | `skills/frontend/data-fetching.md` | frontend |
 | `performance` | `skills/frontend/performance.md` | frontend |
+| `server-components` | `skills/frontend/server-components.md` | frontend |
+| `concurrent-react` | `skills/frontend/concurrent-react.md` | frontend |
+| `composition-patterns` | `skills/frontend/composition-patterns.md` | frontend |
+| `typescript-patterns` | `skills/frontend/typescript-patterns.md` | frontend |
+| `design-system` | `skills/frontend/design-system.md` | frontend |
+| `animations` | `skills/frontend/animations.md` | frontend |
+| `web-vitals` | `skills/frontend/web-vitals.md` | frontend |
+| `state-machines` | `skills/frontend/state-machines.md` | frontend |
 | `api-design` | `skills/backend/api-design.md` | backend |
 | `database` | `skills/backend/database.md` | backend |
 | `authentication` | `skills/backend/authentication.md` | backend |

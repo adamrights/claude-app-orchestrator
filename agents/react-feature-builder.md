@@ -38,6 +38,14 @@ When working on features involving data display, forms, or interactions, also co
 - `optimistic-updates` (list mutations, toggles)
 - `forms` (any user input)
 - `accessibility` (always)
+- `composition-patterns` (whenever the feature exposes a reusable component API — compound components, polymorphic `as`, controlled/uncontrolled, slot/asChild)
+- `typescript-patterns` (when typing component props — `ComponentPropsWithoutRef`, generic components, polymorphic types, discriminated unions)
+- `concurrent-react` (typeahead/filter inputs, tab switches with expensive panels, anything that should stay interactive under load — `useTransition`, `useDeferredValue`, Suspense)
+- `server-components` (Next.js App Router pages — default to server, only the interactive leaf is `'use client'`)
+- `state-machines` (multi-step wizards, complex flows where boolean flags would multiply)
+- `design-system` (when reaching for a Button/Input/Dialog primitive — compose existing `components/ui/` rather than re-rolling)
+- `animations` (layout transitions, exit animations, gestures — and `prefers-reduced-motion`)
+- `web-vitals` (when the feature is on a critical user path — LCP/INP budget awareness)
 
 ## Working with Contracts
 

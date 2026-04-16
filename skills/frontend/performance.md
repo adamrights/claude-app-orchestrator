@@ -7,6 +7,8 @@ tags: [performance, code-splitting, lazy-loading, memoization, virtualization, b
 ## When to use
 Every production app. But **don't optimize prophylactically** — measure first, fix the real bottleneck, move on. Most React perf problems are bundle size, unvirtualized long lists, or unoptimized images — not missing `useMemo`.
 
+For Web Vitals (LCP/INP/CLS), production observability, and Profiler-driven audits, see `web-vitals.md`. For the runtime mechanics of `useTransition`/`useDeferredValue`/Suspense, see `concurrent-react.md`.
+
 ## Guidelines
 
 - **Measure first, always.** Chrome DevTools Performance tab, React DevTools Profiler, Lighthouse, WebPageTest. If you can't point at a metric that moved, your optimization didn't happen.
@@ -16,12 +18,15 @@ Every production app. But **don't optimize prophylactically** — measure first,
   - Vite: dynamic `import()` creates separate chunks automatically.
 - **Virtualization:** Use `@tanstack/react-virtual` when rendering more than ~200 rows/cards. Breaks browser find-in-page — provide an in-app search input to compensate.
 - **`useMemo` / `useCallback`:** Only when (a) profiling shows the recompute is expensive OR (b) passing a stable reference to a `React.memo`-wrapped child. Sprinkling them everywhere **slows things down** — the comparison isn't free.
+- **React Compiler (React 19+):** When enabled (`babel-plugin-react-compiler`), it auto-memoizes components and values. In compiler-enabled projects, manual `useMemo`/`useCallback`/`React.memo` become largely redundant — remove them when the compiler is in place. Verify with the React DevTools (the compiler badge appears next to compiled components).
 - **`React.memo`** on pure leaf components that re-render often (list items, table cells).
 - **Images:** Next.js `<Image>` handles sizing, formats (AVIF/WebP), and lazy loading. For Vite, use `vite-plugin-image-optimizer` or pre-optimize via CDN (Cloudflare Images, Cloudinary). Always set `loading="lazy"` on below-fold `<img>` tags.
 - **Bundle analysis:** `@next/bundle-analyzer` or `rollup-plugin-visualizer` (Vite). Run it at least monthly, or any time you add a dependency larger than 20kB gzipped.
 - **Tree-shake imports:** `import { debounce } from 'lodash-es'`, not `import _ from 'lodash'`. Same for `date-fns`, `rxjs`, `@mui/*`. Check your bundle — the wrong import can drag in 400kB.
 - **Fonts:** preload critical fonts (`<link rel="preload" as="font">`), use `font-display: swap` to avoid FOIT (flash of invisible text). Self-host or use `next/font` for zero layout shift.
-- **Avoid re-rendering the world on context change:** split contexts by update frequency. An auth context (rarely changes) and a cart context (changes often) should be separate.
+- **Avoid re-rendering the world on context change:** split contexts by update frequency. An auth context (rarely changes) and a cart context (changes often) should be separate. For frequently-updating subscriber sets, prefer `useSyncExternalStore` (Zustand, Jotai) over Context — Context can't subscribe to a slice.
+- **Defer non-urgent updates** with `useTransition` (event-handler-driven) or `useDeferredValue` (input-driven). Critical for INP — see `web-vitals.md` and `concurrent-react.md`.
+- **Server Components (Next.js App Router):** the cheapest perf win is moving non-interactive UI off the client bundle entirely. Audit `'use client'` boundaries — only the interactive leaf needs it. See `server-components.md`.
 
 ## Examples
 
