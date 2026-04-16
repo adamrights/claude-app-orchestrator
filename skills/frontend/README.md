@@ -11,7 +11,7 @@
 - [Forms](forms.md) — react-hook-form + Zod, validation, multi-step
 - [Accessibility](accessibility.md) — Semantic HTML, ARIA, keyboard nav, screen readers
 
-## Distinguished React (advanced patterns)
+## Advanced React
 
 - [Server Components](server-components.md) — Next.js RSC, `'use client'` boundaries, Server Actions, streaming Suspense
 - [Concurrent React](concurrent-react.md) — `useTransition`, `useDeferredValue`, Suspense as a primitive, `useId`

@@ -19,7 +19,7 @@ The repo gives Claude agents two things: (1) coding **skills** to follow, and (2
   - `contract-validator.md`, `shared-resource-arbitrator.md`, `migration-specialist.md` — Orchestration support
   - `react-feature-builder.md`, `api-endpoint-builder.md`, `fullstack-debugger.md`, `code-reviewer.md` — Feature specialists
   - `data-table-builder.md`, `dashboard-builder.md`, `admin-panel-builder.md` — Data-heavy app specialists
-  - `rsc-architect.md`, `design-system-builder.md`, `react-performance-auditor.md` — Distinguished React specialists
+  - `rsc-architect.md`, `design-system-builder.md`, `react-performance-auditor.md` — Advanced React specialists
   - `integration-specialist.md`, `background-jobs-specialist.md`, `rbac-specialist.md` — Domain specialists (v2)
 - `blueprints/` — Declarative app specs (YAML) and examples
 - `templates/` — Starter project scaffolds referenced by blueprints

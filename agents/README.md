@@ -17,7 +17,7 @@
 - [Fullstack Debugger](fullstack-debugger.md) — Traces and fixes bugs across frontend/backend layers
 - [Code Reviewer](code-reviewer.md) — Reviews for correctness, performance, a11y, and security
 
-## Distinguished React Specialists
+## Advanced React Specialists
 
 - [RSC Architect](rsc-architect.md) — Designs `'use client'` boundaries, Server Actions, and streaming Suspense for Next.js App Router
 - [Design System Builder](design-system-builder.md) — Scaffolds Radix + Tailwind + CVA primitives (Button, Dialog, Form, etc.) with `forwardRef` and accessibility baked in
