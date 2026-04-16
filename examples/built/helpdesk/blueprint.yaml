@@ -1,0 +1,316 @@
+# =============================================================================
+# helpdesk — flagship reference build for claude-app-orchestrator
+# -----------------------------------------------------------------------------
+# A B2B customer support ticketing system ("Zendesk-lite"). It was chosen as
+# the flagship example because:
+#   1. It's instantly recognizable — every reader has filed a support ticket.
+#   2. It's B2B-shaped (multiple roles, real workflows, audit trails).
+#   3. It exercises ~17 of the catalog's 36 skills and dispatches almost the
+#      entire specialist fleet (RBAC, jobs, integrations, dashboards, tables,
+#      admin panels, RSC, design-system).
+#   4. It's *not* the cliché todo/kanban demo every framework already ships.
+#   5. A user can realistically deploy it to their team and use it.
+#
+# This file is heavily commented on purpose — treat it as documentation that
+# happens to also be runnable.
+# =============================================================================
+
+version: 2                       # v2 enables RBAC, jobs, integrations sections
+name: helpdesk
+description: B2B customer support ticketing system with roles, SLA timers, and email notifications
+
+# -----------------------------------------------------------------------------
+# Stack — fullstack Next.js because the app needs server-rendered pages
+# (ticket detail, dashboards) plus authenticated mutations. Postgres is
+# required for full-text search across ticket bodies and comments. GitHub
+# OAuth keeps the auth setup minimal; users are mapped to roles on first
+# sign-in by the auth feature.
+# -----------------------------------------------------------------------------
+stack:
+  type: fullstack               # → templates/nextjs-prisma-tailwind
+  database: postgres            # required for full-text search (ticket-search feature)
+  auth: github                  # cheapest auth to demo; swap for email/google in your fork
+
+# -----------------------------------------------------------------------------
+# Models — five entities. Comments and tags are normalized so an agent can
+# triage by tag and the SLA job can scan tickets without joining the comment
+# table. The Ticket.status field is constrained by Zod validation (mirrors the
+# state-machine skill referenced by ticket-crud-api).
+# -----------------------------------------------------------------------------
+models:
+  User:
+    fields:
+      id: cuid
+      email: string @unique
+        validation: z.string().email()
+      name: string
+        validation: z.string().min(1).max(100)
+      # role drives every RBAC check in lib/rbac.ts; default is set at signup
+      role: string @default(customer)
+        validation: z.enum(["customer", "agent", "admin"])
+      tickets: Ticket[]                     # tickets this user filed (as customer)
+      assignedTickets: Ticket[]             # tickets assigned to this user (as agent)
+      comments: Comment[]
+      createdAt: datetime @default(now())
+
+  Ticket:
+    fields:
+      id: cuid
+      title: string
+        validation: z.string().min(1).max(200)
+      description: string
+        validation: z.string().min(1).max(10000)
+      # status is a finite state machine — see state-machines skill
+      status: string @default(open)
+        validation: z.enum(["open", "in_progress", "waiting_on_customer", "resolved", "closed"])
+      priority: string @default(medium)
+        validation: z.enum(["low", "medium", "high", "urgent"])
+      customer: User @relation              # who filed it
+      assignedAgent: User? @relation        # nullable until triaged
+      slaDeadline: datetime?                # set by priority on create; checked by sla-deadline-checker job
+      comments: Comment[]
+      tags: TicketTag[]
+      createdAt: datetime @default(now())
+      updatedAt: datetime @default(now())
+
+  Comment:
+    fields:
+      id: cuid
+      ticket: Ticket @relation
+      author: User @relation
+      body: string
+        validation: z.string().min(1).max(5000)
+      # internal notes are visible only to agents/admins — enforced in lib/rbac.ts
+      isInternalNote: boolean @default(false)
+      createdAt: datetime @default(now())
+
+  Tag:
+    fields:
+      id: cuid
+      name: string @unique
+        validation: z.string().min(1).max(40)
+      color: string @default(#6b7280)       # hex color for UI badge
+      tickets: TicketTag[]
+
+  # Junction model — Prisma needs an explicit table to support the many-to-many
+  # because we may add metadata (e.g. taggedAt) later without a destructive
+  # migration.
+  TicketTag:
+    fields:
+      ticket: Ticket @relation
+      tag: Tag @relation
+      createdAt: datetime @default(now())
+
+# -----------------------------------------------------------------------------
+# RBAC — three roles. Customers can only see their own tickets. Agents see
+# everything and can post internal notes. Admins inherit everything plus
+# user management. The RBAC Specialist generates the permission module and
+# middleware; routes/server-actions read from it.
+# -----------------------------------------------------------------------------
+rbac:
+  roles:
+    - name: customer
+      permissions:
+        - tickets.read.own              # only tickets where customerId = self
+        - tickets.create
+        - comments.create.own-tickets
+    - name: agent
+      permissions:
+        - tickets.read.all
+        - tickets.update                # status, priority, tags
+        - tickets.assign                # set assignedAgentId
+        - comments.create
+        - comments.create.internal      # internal notes
+    - name: admin
+      permissions:
+        - tickets.read.all
+        - tickets.update
+        - tickets.assign
+        - tickets.delete
+        - comments.create
+        - comments.create.internal
+        - users.manage                  # promote/demote users
+  default_role: customer                # everyone starts as customer; admin promotes them
+
+# -----------------------------------------------------------------------------
+# Integrations — Resend for transactional email. The integration-specialist
+# wraps the SDK in a typed client at lib/email.ts so feature code never
+# touches the raw SDK.
+# -----------------------------------------------------------------------------
+integrations:
+  - service: resend
+    purpose: transactional email (assignment, reply, resolved, SLA breach notifications)
+    env_vars: [RESEND_API_KEY]
+    sdk: resend
+
+# -----------------------------------------------------------------------------
+# Jobs — a single cron task that scans for SLA breaches every 15 minutes
+# and notifies the assigned agent. Background Jobs Specialist owns this.
+# -----------------------------------------------------------------------------
+jobs:
+  - name: sla-deadline-checker
+    trigger: cron
+    schedule: "*/15 * * * *"           # every 15 minutes
+    description: Find tickets past slaDeadline and email the assigned agent (and admins on repeated breach)
+    skills: [api-design, database]
+
+# -----------------------------------------------------------------------------
+# Shared primitives — built before any feature so all features can import
+# them. The design-system primitives are Radix + Tailwind wrappers so feature
+# code stays declarative.
+# -----------------------------------------------------------------------------
+shared:
+  - name: design-system
+    description: Radix + Tailwind primitives — Button, Dialog, Input, Form, Badge, Card, Table, Tooltip, DropdownMenu
+    skills: [react-component, styling, accessibility, design-system]
+
+# -----------------------------------------------------------------------------
+# Pages — the four authenticated surfaces. The agent dashboard and admin
+# panel are role-gated; the orchestrator wires this into middleware via the
+# RBAC permissions above.
+# -----------------------------------------------------------------------------
+pages:
+  - path: /tickets
+    description: Customer's ticket list (or all tickets if agent/admin) with search, filters, pagination
+    auth: true
+    features:
+      - ticket list table
+      - new ticket button
+
+  - path: /tickets/[id]
+    description: Ticket detail — status, metadata, comment thread, status-change controls
+    auth: true
+    features:
+      - ticket header with status + priority + assigned agent
+      - comment thread with internal-note toggle (agents only)
+      - status change dropdown
+
+  - path: /tickets/new
+    description: Multi-step form to file a new ticket
+    auth: true
+    features:
+      - step 1 title + description
+      - step 2 priority + tags
+      - step 3 review + submit
+
+  - path: /agent/dashboard
+    description: Agent metrics — open ticket count, avg response time, status chart, my-queue table
+    auth: true
+    features:
+      - kpi cards (open / in-progress / overdue)
+      - status breakdown chart
+      - my queue table
+
+  - path: /admin/users
+    description: Admin panel for user + role management
+    auth: true
+    features:
+      - user list with role filter
+      - promote/demote dialog
+
+# -----------------------------------------------------------------------------
+# Execution — let the orchestrator parallelize where the dependency graph
+# allows. The auth → rbac-foundation → ticket-crud-api spine is sequential
+# but the leaf features (search, dashboard, jobs, email) fan out.
+# -----------------------------------------------------------------------------
+execution: auto
+
+# -----------------------------------------------------------------------------
+# Features — the buildable units. Order matters only for readability; the
+# orchestrator computes the actual wave plan from depends_on.
+# -----------------------------------------------------------------------------
+features:
+  # 1. Auth — GitHub OAuth + first-signup role assignment (defaults to customer)
+  - name: auth
+    description: GitHub OAuth via NextAuth, session-bound user record, first-signup defaults role to customer
+    skills: [authentication, react-hooks]
+
+  # 2. RBAC foundation — permissions module + middleware. Every feature that
+  #    touches data depends on this so checks are uniform.
+  - name: rbac-foundation
+    description: Permissions enum, role utilities, server-action guard, page-level role middleware
+    skills: [authentication, validation, typescript-patterns]
+    depends_on: [auth]
+
+  # 3. Ticket CRUD API — Server Actions + Zod validation; the Ticket state
+  #    machine (state-machines) is enforced here.
+  - name: ticket-crud-api
+    description: Server Actions for createTicket, updateStatus, assignAgent, deleteTicket — all RBAC-checked, all Zod-validated
+    skills: [api-design, database, validation, state-machines]
+    depends_on: [auth, rbac-foundation]
+
+  # 4. Ticket list table — searchable, filterable, paginated. Output of the
+  #    data-table-builder specialist.
+  - name: ticket-list-table
+    description: Searchable, filterable, paginated ticket table with column sort and bulk-select
+    skills: [data-tables, pagination, server-components, data-fetching]
+    depends_on: [ticket-crud-api]
+
+  # 5. Ticket detail page — RSC for the ticket header + metadata; comment
+  #    thread is composed in. Output of rsc-architect.
+  - name: ticket-detail-page
+    description: RSC ticket detail page with status controls, priority, assigned agent, and comment thread mount-point
+    skills: [server-components, composition-patterns, state-machines]
+    depends_on: [ticket-crud-api]
+
+  # 6. Comment thread — list + reply form, optimistic updates, internal-note
+  #    toggle visible only to agents/admins.
+  - name: comment-thread
+    description: Comment list with reply form, optimistic updates, internal-note toggle gated by role
+    skills: [react-component, optimistic-updates, forms, composition-patterns]
+    depends_on: [ticket-detail-page]
+
+  # 7. Ticket create — multi-step form (title/description → priority/tags →
+  #    review). slaDeadline is computed from priority at submit.
+  - name: ticket-create
+    description: Multi-step new-ticket form with Zod validation; computes slaDeadline from priority
+    skills: [forms, validation, react-hooks]
+    depends_on: [ticket-crud-api]
+
+  # 8. Ticket search — Postgres full-text search across title, description,
+  #    and comment bodies. Uses the search.md skill (tsvector + GIN index).
+  - name: ticket-search
+    description: Postgres full-text search across ticket title, description, and comment bodies; powers the table search box
+    skills: [search, database, api-design]
+    depends_on: [ticket-crud-api]
+
+  # 9. Agent dashboard — KPI cards, status breakdown chart, my-queue table.
+  #    Output of dashboard-builder.
+  - name: agent-dashboard
+    description: Agent metrics dashboard — open count, avg response time, status chart, personal queue
+    skills: [server-components, data-tables, web-vitals]
+    depends_on: [ticket-crud-api]
+
+  # 10. SLA timer job — cron handler that finds breached tickets and emails
+  #     the assigned agent. Owned by background-jobs-specialist.
+  - name: sla-timer-job
+    description: Cron handler invoked every 15 min; flags tickets past slaDeadline and emails assigned agent
+    skills: [api-design, database]
+    depends_on: [ticket-crud-api, email-notifications]
+
+  # 11. Email notifications — assignment, customer reply, resolution. Wraps
+  #     the lib/email.ts client created by integration-specialist.
+  - name: email-notifications
+    description: Send transactional email on ticket assignment, new comment, and status change to resolved
+    skills: [api-design]
+    depends_on: [ticket-crud-api]
+
+  # 12. User management — admin-only panel for listing users and changing
+  #     roles. Output of admin-panel-builder.
+  - name: user-management
+    description: Admin panel for listing users and changing role (customer/agent/admin)
+    skills: [data-tables, forms, validation]
+    depends_on: [rbac-foundation]
+
+  # 13. Tests — component + integration coverage on the critical paths:
+  #     ticket creation, status transitions, RBAC enforcement, comment thread.
+  - name: tests
+    description: React Testing Library + Playwright coverage of ticket creation, status transitions, RBAC enforcement, and comment thread
+    skills: [react-testing, e2e-testing]
+    depends_on:
+      - ticket-create
+      - ticket-list-table
+      - ticket-detail-page
+      - comment-thread
+      - rbac-foundation
+      - user-management

@@ -7,3 +7,7 @@ node_modules/
 # Ralph loop runtime state (template is tracked, state/logs are not)
 .ralph/state.json
 .ralph/logs/
+
+# Claude Code's local state under .claude/ — commands/ are tracked source; the rest is per-machine.
+.claude/agent-memory/
+.claude/agents/

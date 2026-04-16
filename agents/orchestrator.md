@@ -137,6 +137,8 @@ Splittable features: [todo-list-ui]
 
 Always sequential. No changes from the original workflow.
 
+> Write `BUILD_REPORT.md` at the end of this phase per the Build Report contract (see section below). Subsequent phases append to it incrementally so a partial build still leaves the user with a useful trace.
+
 1. Read the blueprint YAML.
 2. **Resolve the template** using the rules below.
 3. Read `{knowledge_repo}/templates/{template}/scaffold.yaml` for metadata.
@@ -418,6 +420,35 @@ Same as before, always sequential:
 3. Fix any critical or warning-level issues.
 4. Run `npm run build` to verify the production build works.
 5. Final commit: `git commit -m "chore: integration fixes and cleanup"`
+6. **Finalize `BUILD_REPORT.md`** — append the "Done" section per the Build Report contract below. This is the user-facing summary they read after the build completes.
+
+---
+
+## Build Report
+
+The orchestrator maintains a `BUILD_REPORT.md` in the **output project root** (next to `package.json`), updated incrementally as the build progresses. Writing it incrementally — rather than at the end — means partial-build state survives a crash; users who interrupt or hit an error mid-build still get a useful trace of what got done.
+
+### When to write
+
+| Phase | What to append to BUILD_REPORT.md |
+|-------|-----------------------------------|
+| Phase 1 (Scaffold) — at the end | Initialize the file. Write the `# Build Report` header, blueprint name + description, stack/template chosen, scaffold timestamp. Then a `## Phase 1: Scaffold ✓` section listing template, models generated, initial commit SHA. |
+| Phase 1.5 (Integrations) — after each integration | Append a bullet to a `## Phase 1.5: Integrations` section: `- {integration} ({sdk}) — env vars: {VAR1}, {VAR2}; commit: {sha}` |
+| Phase 2 (Build Features) — after each feature commit | Append a row to a `## Phase 2: Features` markdown table: `| {feature-name} | {specialist-used} | {commit-sha} | {status: ✓ / ⚠ partial / ✗ failed} |`. If parallel waves were used, group rows by wave. |
+| Phase 2.5 (Arbitrated Merge) — only if shared resources arbitrated | Append a `## Phase 2.5: Arbitrated Merges` section listing each shared file touched and which features collided on it. |
+| Phase 2.7 (Jobs & Webhooks) — after each | Append a bullet to a `## Phase 2.7: Jobs & Webhooks` section: `- {name} ({trigger}) — commit: {sha}` |
+| Phase 3 (Integration & Review) — at the end | Append a `## Done` section with: total commits, test pass/fail summary, build pass/fail, **how to run the dev server** (the exact command — `npm run dev`, port, any required env vars), env vars the user still needs to set (with where to put them — `.env.local`, etc.), and **suggested next steps** (e.g., "deploy to Vercel", "run `/audit` for a perf review", "use `/extend` to add a feature"). |
+
+### Format conventions
+
+- Use ✓ for success, ⚠ for partial/skipped, ✗ for failure.
+- Always link skills + specialists by their relative path so the user can click through (`[react-feature-builder](../../agents/react-feature-builder.md)` if the report sits inside an `examples/built/<app>/app/` tree, otherwise an absolute path or omit the link if the user is outside the orchestrator repo).
+- Never paste large code blocks — reference file paths the user can open in their editor.
+- If a phase was skipped (e.g., no v2 sections present), don't write a heading for it.
+
+### Crash recovery
+
+If the orchestrator restarts mid-build (user interruption, network failure, etc.), the next run reads the existing `BUILD_REPORT.md` first to determine which features have already been committed (cross-check against `git log`). It resumes from the next pending feature in the blueprint rather than re-running completed work.
 
 ---
 

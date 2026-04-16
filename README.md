@@ -14,19 +14,36 @@ The default stack is **Next.js + Prisma + Tailwind**, but additional templates a
 
 ## Quick start
 
-1. **Clone this repo** somewhere on your machine.
-2. **Pick a blueprint example** that matches the kind of app you want:
-   - `blueprints/examples/todo-app.yaml` — fullstack web app (Next.js + Prisma)
-   - `blueprints/examples/dashboard-spa.yaml` — client-side SPA (Vite + React)
-   - `blueprints/examples/notes-api.yaml` — standalone API (Hono + Drizzle)
-3. **Copy and edit it** to describe your own app:
-   ```bash
-   cp blueprints/examples/todo-app.yaml ~/my-app.yaml
-   ```
-4. **Open Claude Code** in any directory and ask:
-   > Read `/path/to/claude-app-orchestrator/agents/orchestrator.md` and build `~/my-app.yaml` into `~/my-app/`.
+```bash
+git clone <this-repo> && cd claude-app-orchestrator
+./install.sh                 # symlinks 4 slash commands into ~/.claude/commands/
+```
 
-The orchestrator picks the right template based on the blueprint's `stack`, scaffolds the project, then dispatches specialist agents (with the relevant skills loaded) to build each feature. Each feature becomes its own git commit so you can review the work incrementally.
+Then in Claude Code, from any directory:
+
+```
+/orchestrate examples/built/helpdesk/blueprint.yaml ~/helpdesk
+```
+
+That builds the [helpdesk reference app](examples/built/helpdesk/) — a B2B support ticketing system that exercises ~17 skills and most specialists. To build your own app:
+
+1. Copy a blueprint example: `cp blueprints/examples/todo-app.yaml ~/my-app.yaml`
+2. Edit it to describe your app
+3. `/validate ~/my-app.yaml` (catches typos before the build runs)
+4. `/orchestrate ~/my-app.yaml ~/my-app`
+
+Slash commands at a glance:
+
+| Command | What it does |
+|---------|--------------|
+| `/orchestrate <blueprint> [out]` | Validate, scaffold, and build an app |
+| `/validate <blueprint>` | Pre-flight a blueprint without building |
+| `/audit` | Run the React Performance Auditor in the cwd app |
+| `/extend "<description>"` | Add a new feature to an already-built app |
+
+Without slash commands, see [`CHEATSHEET.md`](CHEATSHEET.md) for the manual incantations.
+
+The orchestrator picks the right template based on the blueprint's `stack`, scaffolds the project, then dispatches specialist agents (with the relevant skills loaded) to build each feature. Each feature becomes its own git commit so you can review the work incrementally. A `BUILD_REPORT.md` lands in the output directory describing what was built and what to do next.
 
 ## How it works
 
