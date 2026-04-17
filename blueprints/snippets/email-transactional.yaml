@@ -1,0 +1,86 @@
+# =============================================================================
+# email-transactional — Resend + react-email + audit log + dev test mode
+# -----------------------------------------------------------------------------
+# Adds transactional email sending via Resend, with email templates authored
+# in react-email, an EmailLog audit trail row per send, and a "test mode" that
+# logs to the database instead of actually sending in development.
+#
+# What this snippet adds:
+#   - one model: `EmailLog` (id, toAddress, template, subject, status,
+#     providerId, errorMessage, sentAt) for an audit trail of every send
+#   - three features: `email-send-helper`, `email-templates-react`,
+#     `email-test-mode`
+#   - one integration entry: `resend` (see swap notes below for Postmark)
+#   - env vars: RESEND_API_KEY, EMAIL_FROM_ADDRESS, EMAIL_TEST_MODE (optional)
+#
+# Where to merge:
+#   - `models:`       → add the `EmailLog` model
+#   - `features:`     → append the three feature entries
+#   - `integrations:` → append the `resend` entry (requires `version: 2`)
+#
+# Notes:
+#   - To swap Resend for Postmark: change the integration `service` to
+#     `postmark`, `sdk` to `postmark`, and replace `RESEND_API_KEY` with
+#     `POSTMARK_SERVER_TOKEN`. The `email-send-helper` feature description
+#     still applies — it's a typed wrapper around whichever provider's send
+#     primitive you point it at.
+#   - Pair with `multi-tenant.yaml` if you want per-org sender domains. Add a
+#     `sendingDomain: string?` field to the Organization model and read from
+#     it in `email-send-helper` to override `EMAIL_FROM_ADDRESS` per-org.
+#   - Test mode: when EMAIL_TEST_MODE=true (auto-set in development), the
+#     helper writes an EmailLog row with status="test_logged" and skips the
+#     network call. View sent-during-dev emails by querying EmailLog.
+#   - depends_on is empty — you can add email at any point. In practice you
+#     will want it before features that send notifications (invites, password
+#     reset, billing receipts).
+# =============================================================================
+
+# === MERGE INTO: models: ===
+EmailLog:
+  fields:
+    id: cuid
+    toAddress: string
+      validation: z.string().email()
+    template: string
+      validation: z.string().min(1).max(100)
+    subject: string
+      validation: z.string().min(1).max(200)
+    status: string @default(pending)
+      validation: z.enum(["pending", "sent", "failed", "test_logged"])
+    providerId: string?     # Resend's email ID, used to look up delivery status
+    errorMessage: string?
+    sentAt: datetime?
+    createdAt: datetime @default(now())
+
+# === MERGE INTO: features: ===
+- name: email-send-helper
+  description: Typed wrapper around the Resend SDK that takes a template name + props, renders the react-email component to HTML, sends via Resend, and writes an EmailLog row with the provider response or error
+  skills: [api-design, validation, database]
+  depends_on: []
+
+- name: email-templates-react
+  description: react-email project setup with shared layout (header/footer/branding) and starter templates for welcome, invite, and password-reset emails
+  skills: [api-design, validation]
+  depends_on: [email-send-helper]
+
+- name: email-test-mode
+  description: When EMAIL_TEST_MODE=true (default in development), short-circuit the send and write an EmailLog with status=test_logged so devs can view payloads in the database without provisioning a real provider key
+  skills: [api-design, database]
+  depends_on: [email-send-helper]
+
+# === MERGE INTO: integrations: ===
+- service: resend
+  purpose: transactional email delivery (welcome, invites, billing receipts, notifications)
+  env_vars:
+    - RESEND_API_KEY
+    - EMAIL_FROM_ADDRESS    # e.g. "Helpdesk <noreply@yourdomain.com>" — must be a verified sender
+    - EMAIL_TEST_MODE       # optional — when "true", logs instead of sending
+  sdk: resend
+
+# -----------------------------------------------------------------------------
+# Skills referenced (verify these exist in agents/orchestrator.md's Skill
+# Mapping table):
+#   - api-design
+#   - validation
+#   - database
+# -----------------------------------------------------------------------------

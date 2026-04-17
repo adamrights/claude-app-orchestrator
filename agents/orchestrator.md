@@ -111,9 +111,13 @@ If any check fails, fall back to sequential mode. Always tell the user which che
 
 ### Step 6: Identify splittable features
 
-A feature is **splittable** (eligible for layer-level parallelism) if its `skills` array contains BOTH:
-- At least one frontend skill: `react-component`, `react-hooks`, `state-management`, `routing`, `styling`
-- At least one backend skill: `api-design`, `database`
+A feature is **splittable** (eligible for layer-level parallelism) if its `skills` array contains AT LEAST ONE skill with Layer `frontend` AND AT LEAST ONE skill with Layer `backend` (see `## Skill Mapping` below). Skills with Layer `shared`, `devops`, or `testing` do NOT count toward either side — they're pattern/type-level and don't imply a layer boundary.
+
+A feature can also override auto-detection explicitly:
+- `splittable: false` on the feature entry — forces single-agent build even if the heuristic would split.
+- `splittable: true` — forces a layer split even if the heuristic says no (rare; usually a mistake).
+
+Additionally, if the feature's picker-assigned specialist is itself a fullstack builder (Data Table Builder, Dashboard Builder, Admin Panel Builder) — those already produce both the API and the UI in one agent — then **do not split**, regardless of the skill check. Splitting fights a specialist that's designed to own the whole surface.
 
 Mark these features. They will be built using the layer-level split workflow inside their wave.
 
@@ -281,7 +285,7 @@ Before spawning the Contract Designer, determine the protocol for this feature:
    - Otherwise → `rest-zod`
 3. If the feature description mentions "tRPC" or "RPC" (case-insensitive), override to `trpc`.
 
-For stub protocols (`graphql-sdl`, `server-actions`): the Contract Designer will either fall back to `rest-zod` or recommend building without a layer split. If it recommends no layer split, treat the feature as a single-agent build and skip Sub-Phases A.5 through C.
+For stub protocols (`graphql-sdl`, `server-actions`): **short-circuit immediately — do not invoke the Contract Designer.** Mark the feature `splittable: false`, re-run the specialist picker (see Phase 2 Sequential Mode Step 2) to pick a single specialist, and build the feature as a single-agent build. Skip Sub-Phases A through C entirely. Rationale: the Contract Designer would just fall back to `rest-zod` or report "no contract" — a wasted round-trip — and the downstream specialist (e.g., RSC Architect for a Server Action feature) already owns both sides of a server-action surface. This avoids the run-to-run non-determinism where the same blueprint produces different build paths depending on how the Contract Designer flips.
 
 Spawn the Contract Designer agent (`agents/contract-designer.md`) with `protocol` in its inputs. It writes `src/contracts/{feature.name}.ts` and commits to `main`. Wait for completion before Sub-Phase A.5.
 
@@ -474,17 +478,17 @@ When a feature references a skill by short name, resolve it to a file path:
 | `server-components` | `skills/frontend/server-components.md` | frontend |
 | `concurrent-react` | `skills/frontend/concurrent-react.md` | frontend |
 | `composition-patterns` | `skills/frontend/composition-patterns.md` | frontend |
-| `typescript-patterns` | `skills/frontend/typescript-patterns.md` | frontend |
+| `typescript-patterns` | `skills/frontend/typescript-patterns.md` | shared |
 | `design-system` | `skills/frontend/design-system.md` | frontend |
 | `animations` | `skills/frontend/animations.md` | frontend |
 | `web-vitals` | `skills/frontend/web-vitals.md` | frontend |
-| `state-machines` | `skills/frontend/state-machines.md` | frontend |
+| `state-machines` | `skills/frontend/state-machines.md` | shared |
 | `api-design` | `skills/backend/api-design.md` | backend |
 | `database` | `skills/backend/database.md` | backend |
-| `authentication` | `skills/backend/authentication.md` | backend |
+| `authentication` | `skills/backend/authentication.md` | shared |
 | `trpc` | `skills/backend/trpc.md` | backend |
 | `graphql` | `skills/backend/graphql.md` | backend |
-| `validation` | `skills/backend/validation.md` | backend |
+| `validation` | `skills/backend/validation.md` | shared |
 | `migrations` | `skills/backend/migrations.md` | backend |
 | `rate-limiting` | `skills/backend/rate-limiting.md` | backend |
 | `search` | `skills/backend/search.md` | backend |

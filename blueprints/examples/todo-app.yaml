@@ -1,3 +1,4 @@
+# yaml-language-server: $schema=../schema.json
 version: 2
 name: todo-app
 description: A simple todo list with GitHub OAuth authentication

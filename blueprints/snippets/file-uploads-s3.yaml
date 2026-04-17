@@ -1,0 +1,87 @@
+# =============================================================================
+# file-uploads-s3 — S3-compatible object storage with presigned PUT uploads
+# -----------------------------------------------------------------------------
+# Adds direct-to-S3 file uploads using presigned PUT URLs so the browser uploads
+# the bytes straight to object storage and never proxies through your server.
+# Works with AWS S3, Cloudflare R2, MinIO, Backblaze B2, and anything else
+# that speaks the S3 API — set S3_ENDPOINT to point the SDK at the alternate
+# endpoint (omit it for AWS).
+#
+# What this snippet adds:
+#   - one model: `Upload` (id, key, contentType, sizeBytes, uploadedById,
+#     createdAt) for tracking what the user uploaded
+#   - three features: `upload-presign`, `upload-list`, `upload-delete`
+#   - one integration entry: `aws-s3` (the @aws-sdk/client-s3 package — works
+#     against any S3-compatible endpoint)
+#   - env vars: S3_ACCESS_KEY_ID, S3_SECRET_ACCESS_KEY, S3_BUCKET, S3_REGION,
+#     S3_ENDPOINT (optional — only set for non-AWS providers like R2/MinIO)
+#
+# Where to merge:
+#   - `models:`       → add the `Upload` model
+#   - `features:`     → append the three feature entries
+#   - `integrations:` → append the `aws-s3` entry (requires `version: 2`)
+#
+# Notes:
+#   - Client-side flow: the browser asks the `upload-presign` Server Action
+#     for a presigned PUT URL, then PUTs the file bytes directly to S3. This
+#     bypasses your server's bandwidth and request-size limits entirely.
+#   - Max upload size is enforced server-side: the presign action validates
+#     the requested contentType against an allowlist and the requested size
+#     against a hard cap (default 25 MB) before issuing the URL. Adjust both
+#     in the action's Zod schema.
+#   - depends_on: pair with any `auth-*` feature so uploads are scoped to the
+#     signed-in user. The Upload model's `uploadedById` is set on insert.
+#   - For Cloudflare R2: S3_ENDPOINT=https://<account-id>.r2.cloudflarestorage.com
+#     and set S3_REGION=auto.
+#   - For MinIO (local dev): S3_ENDPOINT=http://localhost:9000 with the
+#     `forcePathStyle: true` SDK option.
+# =============================================================================
+
+# === MERGE INTO: models: ===
+Upload:
+  fields:
+    id: cuid
+    key: string @unique
+      validation: z.string().min(1).max(1024)
+    contentType: string
+      validation: z.string().regex(/^[a-z]+\/[a-zA-Z0-9.+-]+$/)
+    sizeBytes: int
+      validation: z.number().int().min(1).max(26214400)   # 25 MB cap
+    uploadedBy: User @relation
+    createdAt: datetime @default(now())
+
+# === MERGE INTO: features: ===
+- name: upload-presign
+  description: Server Action that validates contentType and sizeBytes, generates a unique S3 object key, and returns a presigned PUT URL the browser uses to upload directly to S3
+  skills: [api-design, validation, database]
+  depends_on: [auth-github]   # TODO: replace with whatever auth feature you use
+
+- name: upload-list
+  description: Server Action and UI that lists the current user's uploads with pagination, including a presigned GET URL for inline preview
+  skills: [api-design, database, forms]
+  depends_on: [upload-presign]
+
+- name: upload-delete
+  description: Server Action that deletes the S3 object and removes the Upload row, scoped to the upload's owner
+  skills: [api-design, validation, database]
+  depends_on: [upload-presign]
+
+# === MERGE INTO: integrations: ===
+- service: aws-s3
+  purpose: object storage for user file uploads (presigned PUT/GET URLs); compatible with R2, MinIO, B2 via S3_ENDPOINT
+  env_vars:
+    - S3_ACCESS_KEY_ID
+    - S3_SECRET_ACCESS_KEY
+    - S3_BUCKET
+    - S3_REGION
+    - S3_ENDPOINT     # optional — only set for R2/MinIO/B2; omit for AWS
+  sdk: "@aws-sdk/client-s3"
+
+# -----------------------------------------------------------------------------
+# Skills referenced (verify these exist in agents/orchestrator.md's Skill
+# Mapping table):
+#   - api-design
+#   - validation
+#   - database
+#   - forms
+# -----------------------------------------------------------------------------

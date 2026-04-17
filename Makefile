@@ -1,7 +1,7 @@
 # claude-app-orchestrator Makefile
 # Cheap, discoverable entry points for the common operations.
 
-.PHONY: help install uninstall validate build audit check
+.PHONY: help install uninstall validate build audit check refs
 
 help: ## Show this help
 	@echo "Recipes:"
@@ -11,6 +11,7 @@ help: ## Show this help
 	@echo "  build BLUEPRINT=<path> OUT=<dir> Print the slash command to build (build itself runs in Claude Code)"
 	@echo "  audit                            Print the slash command to audit (run in app dir)"
 	@echo "  check                            Validate every blueprint in blueprints/examples/ and examples/built/"
+	@echo "  refs                             Lint cross-references between agents, skills, templates, blueprints"
 	@echo ""
 	@echo "Examples:"
 	@echo "  make install"
@@ -53,3 +54,6 @@ check:
 		node scripts/validate-blueprint.mjs "$$f" || status=1; \
 	done; \
 	exit $$status
+
+refs:
+	@node scripts/check-references.mjs

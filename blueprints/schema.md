@@ -10,6 +10,22 @@ A blueprint is a YAML file with the following top-level fields.
 
 The orchestrator treats a missing `version` field as v1 and applies a shim: all v2-only sections (`integrations`, `jobs`, `webhooks`, `tenancy`, `rbac`, `flags`, `shared`, `config`) are silently ignored. Existing v1 blueprints work unchanged.
 
+## Editor autocomplete
+
+A JSON Schema for blueprint files lives at `blueprints/schema.json`. Pointing your editor at it via `yaml-language-server` (built into VS Code's YAML extension and supported by most LSP-aware editors) gives you property autocomplete, inline error squiggles for unknown fields, and hover tooltips with the field descriptions from this document. Add one of these comments as the first line of any blueprint to opt in:
+
+```yaml
+# yaml-language-server: $schema=https://claude-app-orchestrator.dev/blueprint.schema.json
+```
+
+For local development without a hosted schema URL, point at the file by relative path (this works in VS Code):
+
+```yaml
+# yaml-language-server: $schema=../schema.json
+```
+
+The JSON Schema is intentionally lightweight — it covers shape, required fields, enums (stack types, execution modes, skill short-names, etc.), and v1 vs v2 differences for editor UX. It does NOT replicate every cross-file check the validator performs (skill mapping resolution against `agents/orchestrator.md`, dependency cycle detection, model relation resolution, template directory existence). For authoritative validation always run `node scripts/validate-blueprint.mjs <blueprint.yaml>` — the JSON Schema is for editor ergonomics, not deep validation.
+
 ## Top-level Fields
 
 | Field | Type | Required | Description |

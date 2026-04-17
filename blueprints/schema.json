@@ -1,0 +1,586 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://claude-app-orchestrator.dev/blueprint.schema.json",
+  "title": "Claude App Orchestrator Blueprint",
+  "description": "Declarative YAML specification for an application built by the Claude App Orchestrator. A blueprint drives template selection, database schema generation, and the per-feature specialist dispatch. Version 1 (no `version` field) supports the core sections (models, pages, features). Version 2 (`version: 2`) enables additional sections (integrations, jobs, webhooks, tenancy, rbac, flags, shared, config). See blueprints/schema.md for the authoritative reference.",
+  "type": "object",
+  "required": ["name", "description", "features"],
+  "additionalProperties": false,
+  "properties": {
+    "version": {
+      "description": "Schema version. Omit or set to 1 for the legacy v1 shape (models, pages, features only). Set to 2 to enable v2 sections: integrations, jobs, webhooks, tenancy, rbac, flags, shared, config. The orchestrator silently ignores v2 sections when version is 1 or missing.",
+      "type": "integer",
+      "enum": [1, 2]
+    },
+    "name": {
+      "description": "Project name. Used as the package.json `name`, the output directory, and in CLAUDE.md. Must be lowercase kebab-case: start with a letter, then letters / digits / hyphens.",
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9-]*$",
+      "examples": ["todo-app", "helpdesk", "taskflow"]
+    },
+    "description": {
+      "description": "One-line summary of what the app does. Shown in the generated CLAUDE.md and used by specialist agents for context.",
+      "type": "string",
+      "minLength": 1,
+      "examples": ["A simple todo list with GitHub OAuth authentication"]
+    },
+    "stack": {
+      "description": "High-level stack declaration. Drives template inference (fullstack -> nextjs-prisma-tailwind, spa -> vite-react-tailwind, api -> hono-api). Override explicitly with the top-level `template` field.",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "type": {
+          "description": "Application shape. `fullstack` (Next.js + Prisma + Tailwind), `spa` (Vite + React), or `api` (Hono standalone API).",
+          "type": "string",
+          "enum": ["fullstack", "spa", "api"],
+          "default": "fullstack"
+        },
+        "database": {
+          "description": "Database engine. Only meaningful for `fullstack` and `api` types. SPA apps consume an external API and have no database.",
+          "type": "string",
+          "enum": ["postgres", "sqlite"],
+          "default": "postgres"
+        },
+        "auth": {
+          "description": "Authentication provider. Only meaningful for `fullstack`. Use `none` to skip auth scaffolding entirely.",
+          "type": "string",
+          "enum": ["github", "google", "email", "none"],
+          "default": "none"
+        }
+      }
+    },
+    "template": {
+      "description": "Explicit template name to use instead of the stack-based inference. Must match a directory under `templates/` in the knowledge repo (e.g., `nextjs-prisma-tailwind`, `vite-react-tailwind`, `hono-api`).",
+      "type": "string",
+      "examples": ["nextjs-prisma-tailwind", "vite-react-tailwind", "hono-api"]
+    },
+    "execution": {
+      "description": "How the orchestrator runs features. `auto` (default) infers dependencies and runs in parallel if safety checks pass, falls back to sequential otherwise. `parallel` forces parallel mode and skips safety checks (only use if you are sure the graph is clean). `sequential` always runs one feature at a time.",
+      "type": "string",
+      "enum": ["auto", "parallel", "sequential"],
+      "default": "auto"
+    },
+    "shared_resources": {
+      "description": "Optional list of additional file paths the orchestrator should treat as shared resources. Any feature touching these is serialized against other touchers or routed through the Shared Resource Arbitrator. Merged with the default Shared Resource Registry in Phase 0.",
+      "type": "array",
+      "items": {
+        "type": "string",
+        "description": "File path relative to the output project root (globs accepted)."
+      }
+    },
+    "models": {
+      "description": "Database models keyed by PascalCase model name. Each model must have a `fields` object. During scaffolding, the orchestrator translates this section into `prisma/schema.prisma` (fullstack) or `src/db/schema.ts` (api). SPA projects have no database and ignore this section.",
+      "type": "object",
+      "patternProperties": {
+        "^[A-Z][A-Za-z0-9]*$": {
+          "$ref": "#/$defs/Model"
+        }
+      },
+      "additionalProperties": false
+    },
+    "pages": {
+      "description": "UI routes. Ignored for `stack.type: api`. Each page describes a URL path and the features that should surface on it. Feature entries here are prose bullets, NOT references to the top-level `features` list.",
+      "type": "array",
+      "items": { "$ref": "#/$defs/Page" }
+    },
+    "features": {
+      "description": "Buildable units processed by the orchestrator, one commit per feature. In `auto` or `parallel` mode the orchestrator groups these into waves based on inferred + explicit dependencies. REQUIRED and must contain at least one entry.",
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/$defs/Feature" }
+    },
+    "integrations": {
+      "description": "[v2] External service dependencies. Each entry installs an SDK, adds env vars to `.env.example`, and invokes the Integration Specialist to create a typed client wrapper. Only processed when `version: 2`.",
+      "type": "array",
+      "items": { "$ref": "#/$defs/Integration" }
+    },
+    "jobs": {
+      "description": "[v2] Background tasks, cron-scheduled or queue-driven. Processed by the Background Jobs Specialist in Phase 2.7 after all feature waves. Only processed when `version: 2`.",
+      "type": "array",
+      "items": { "$ref": "#/$defs/Job" }
+    },
+    "webhooks": {
+      "description": "[v2] Inbound webhook endpoints from third-party services. Each becomes a route handler with signature verification for the source service. Only processed when `version: 2`.",
+      "type": "array",
+      "items": { "$ref": "#/$defs/Webhook" }
+    },
+    "tenancy": {
+      "description": "[v2] Multi-tenancy configuration. Generates a tenant model (organization/workspace/team) and adds foreign keys to tenant-scoped models. Only processed when `version: 2`.",
+      "$ref": "#/$defs/Tenancy"
+    },
+    "rbac": {
+      "description": "[v2] Role-based access control. The RBAC Specialist generates a permissions module, authorization middleware, and role utilities in Wave 0. Only processed when `version: 2`.",
+      "$ref": "#/$defs/Rbac"
+    },
+    "flags": {
+      "description": "[v2] Feature flags. For `provider: env`, flags become FLAG_NAME env vars. For external providers (statsig, launchdarkly, unleash) the orchestrator wraps the provider's SDK. Only processed when `version: 2`.",
+      "$ref": "#/$defs/Flags"
+    },
+    "shared": {
+      "description": "[v2] Cross-feature primitives built BEFORE any feature wave (conceptually Wave -1). Used for design systems, API clients, and other shared code that every feature imports. Only processed when `version: 2`.",
+      "type": "array",
+      "items": { "$ref": "#/$defs/SharedPrimitive" }
+    },
+    "config": {
+      "description": "[v2] Per-environment settings. Generates a typed config module at `src/lib/config.ts` that reads from env vars with per-environment defaults. Only processed when `version: 2`.",
+      "$ref": "#/$defs/Config"
+    }
+  },
+
+  "$defs": {
+    "SkillName": {
+      "description": "Short-name of a skill that the orchestrator loads for context when building the feature. Resolved via the Skill Mapping table in agents/orchestrator.md. Custom skill names are allowed but will bypass autocomplete; unknown skills warn in the validator.",
+      "type": "string",
+      "enum": [
+        "react-component",
+        "react-hooks",
+        "state-management",
+        "styling",
+        "routing",
+        "error-handling",
+        "forms",
+        "accessibility",
+        "optimistic-updates",
+        "data-fetching",
+        "data-tables",
+        "pagination",
+        "performance",
+        "server-components",
+        "concurrent-react",
+        "composition-patterns",
+        "typescript-patterns",
+        "design-system",
+        "animations",
+        "web-vitals",
+        "state-machines",
+        "api-design",
+        "database",
+        "authentication",
+        "trpc",
+        "graphql",
+        "validation",
+        "migrations",
+        "rate-limiting",
+        "search",
+        "caching",
+        "docker",
+        "ci-cd",
+        "secrets",
+        "react-testing",
+        "e2e-testing"
+      ]
+    },
+
+    "FieldValue": {
+      "description": "Model field. Either a scalar type string (e.g., `cuid`, `string`, `string?`, `User @relation`, `Post[]`, `datetime @default(now())`), or an object carrying a `type` string plus optional `validation:` Zod expression. Accepted base types: `cuid`, `uuid`, `string`, `text`, `int`, `float`, `boolean`, `datetime`, `json`, `bytes`, or the name of another model. Suffix `?` marks optional; suffix `[]` marks has-many. Modifiers: `@unique`, `@default(value)`, `@relation`.",
+      "oneOf": [
+        {
+          "type": "string",
+          "examples": [
+            "cuid",
+            "string",
+            "string?",
+            "string @unique",
+            "int",
+            "boolean @default(false)",
+            "datetime @default(now())",
+            "User @relation",
+            "Post[]"
+          ]
+        },
+        {
+          "type": "object",
+          "required": ["type"],
+          "additionalProperties": false,
+          "properties": {
+            "type": {
+              "description": "The underlying type declaration (same syntax as the scalar string form).",
+              "type": "string"
+            },
+            "validation": {
+              "description": "[v2] Zod expression embedded in contract request schemas and API validation middleware. Example: `z.string().email()`, `z.number().int().min(0).max(150)`.",
+              "type": "string"
+            }
+          }
+        }
+      ]
+    },
+
+    "Model": {
+      "description": "Database model definition. Must contain a `fields` object.",
+      "type": "object",
+      "required": ["fields"],
+      "additionalProperties": false,
+      "properties": {
+        "fields": {
+          "description": "Map of field name (camelCase) to field definition.",
+          "type": "object",
+          "patternProperties": {
+            "^[a-z][A-Za-z0-9]*$": { "$ref": "#/$defs/FieldValue" }
+          },
+          "additionalProperties": false
+        }
+      }
+    },
+
+    "Page": {
+      "description": "A UI route surfaced in the app.",
+      "type": "object",
+      "required": ["path"],
+      "additionalProperties": false,
+      "properties": {
+        "path": {
+          "description": "URL path starting with `/`. Dynamic segments use Next.js bracket syntax (e.g., `/posts/[id]`).",
+          "type": "string",
+          "pattern": "^/",
+          "examples": ["/", "/dashboard", "/posts/[id]"]
+        },
+        "description": {
+          "description": "What the page does. Used by specialists when building UI for the page.",
+          "type": "string"
+        },
+        "auth": {
+          "description": "Whether the page requires an authenticated session. Auto-inferred feature dependencies use this: any feature referencing an `auth: true` page depends on the `auth` feature.",
+          "type": "boolean"
+        },
+        "features": {
+          "description": "Bullet list of UI sub-features the page contains. Prose descriptions, NOT references to top-level feature names.",
+          "type": "array",
+          "items": { "type": "string" }
+        }
+      }
+    },
+
+    "Feature": {
+      "description": "A buildable unit. The orchestrator loads the listed skills, picks a specialist, builds, tests, and commits. Features are ordered for readability but actual build order is computed from `depends_on` plus auto-inferred dependencies.",
+      "type": "object",
+      "required": ["name", "description"],
+      "additionalProperties": true,
+      "properties": {
+        "name": {
+          "description": "Short kebab-case identifier, used in commit messages and as the dependency key. Must be unique across the features list.",
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9-]*$",
+          "examples": ["auth", "todo-crud", "ticket-list-table"]
+        },
+        "description": {
+          "description": "One-sentence explanation of what the feature does. Used by the orchestrator for dependency inference and by the specialist as primary context.",
+          "type": "string",
+          "minLength": 1
+        },
+        "skills": {
+          "description": "Skill short-names that should inform the implementation. Autocomplete suggests all 36 canonical skills from the Skill Mapping table. Mixing at least one frontend and one backend skill marks the feature as `splittable` (eligible for contract-first layer-level parallel build).",
+          "type": "array",
+          "items": { "$ref": "#/$defs/SkillName" }
+        },
+        "depends_on": {
+          "description": "Explicit list of feature names this feature must wait for. Overrides or supplements the orchestrator's auto-inference. Prefer auto-inference where it already works (auth -> authenticated features, model overlap, page overlap, test -> impl).",
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "extends": {
+          "description": "[v2] Name of another feature whose `skills` and `depends_on` are inherited. The child's own lists are merged on top (not replaced). The parent is still built independently.",
+          "type": "string"
+        },
+        "touches": {
+          "description": "Optional manifest of files the feature reads or modifies. Used by the Shared Resource Arbitrator to detect collisions before they occur. Globs accepted.",
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "read": {
+              "description": "Files read but not modified.",
+              "type": "array",
+              "items": { "type": "string" }
+            },
+            "modify": {
+              "description": "Files the feature will write to. Paths in the Shared Resource Registry trigger arbitration.",
+              "type": "array",
+              "items": { "type": "string" }
+            }
+          }
+        },
+        "protocol": {
+          "description": "Explicit protocol override for layer-level split builds. Normally inferred from the project's package.json. `trpc` (tRPC router), `rest-zod` (REST + Zod contract), `graphql-sdl` (GraphQL schema), or `server-actions` (Next.js server actions).",
+          "type": "string",
+          "enum": ["trpc", "rest-zod", "graphql-sdl", "server-actions"]
+        }
+      }
+    },
+
+    "Integration": {
+      "description": "External service dependency. The Integration Specialist installs the SDK, creates a typed client wrapper under `src/integrations/`, and wires up the env vars.",
+      "type": "object",
+      "required": ["service", "purpose", "env_vars", "sdk"],
+      "additionalProperties": false,
+      "properties": {
+        "service": {
+          "description": "Service identifier. Drives the client wrapper's module name.",
+          "type": "string",
+          "examples": ["stripe", "resend", "s3", "sentry"]
+        },
+        "purpose": {
+          "description": "What this integration is used for. Context for the Integration Specialist.",
+          "type": "string"
+        },
+        "env_vars": {
+          "description": "Environment variable names required by the SDK. Added to `.env.example` during integration setup.",
+          "type": "array",
+          "items": { "type": "string" },
+          "examples": [["STRIPE_SECRET_KEY", "STRIPE_WEBHOOK_SECRET"]]
+        },
+        "sdk": {
+          "description": "npm package to install. Accepts scoped names.",
+          "type": "string",
+          "examples": ["stripe", "resend", "@aws-sdk/client-s3"]
+        }
+      }
+    },
+
+    "Job": {
+      "description": "Background task: either cron-scheduled or queue-driven.",
+      "type": "object",
+      "required": ["name", "trigger", "description"],
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "description": "Job identifier. Drives the handler filename and commit message.",
+          "type": "string"
+        },
+        "trigger": {
+          "description": "`cron` = runs on schedule; `queue` = consumes messages from a named queue.",
+          "type": "string",
+          "enum": ["cron", "queue"]
+        },
+        "schedule": {
+          "description": "Cron expression (required when `trigger: cron`). Standard 5-field syntax.",
+          "type": "string",
+          "examples": ["0 9 * * 1", "*/15 * * * *"]
+        },
+        "queue": {
+          "description": "Queue name to consume from (required when `trigger: queue`).",
+          "type": "string",
+          "examples": ["uploads", "emails"]
+        },
+        "description": {
+          "description": "What the job does. Primary context for the Background Jobs Specialist.",
+          "type": "string"
+        },
+        "skills": {
+          "description": "Skills loaded when building the job handler.",
+          "type": "array",
+          "items": { "$ref": "#/$defs/SkillName" }
+        }
+      },
+      "allOf": [
+        {
+          "if": { "properties": { "trigger": { "const": "cron" } }, "required": ["trigger"] },
+          "then": { "required": ["schedule"] }
+        },
+        {
+          "if": { "properties": { "trigger": { "const": "queue" } }, "required": ["trigger"] },
+          "then": { "required": ["queue"] }
+        }
+      ]
+    },
+
+    "Webhook": {
+      "description": "Inbound webhook endpoint from a third-party service. Becomes a route handler with source-specific signature verification.",
+      "type": "object",
+      "required": ["source", "event", "path", "description"],
+      "additionalProperties": false,
+      "properties": {
+        "source": {
+          "description": "Service sending the webhook. Drives the signature verification helper used. If it matches an integration entry, the handler imports that integration's client.",
+          "type": "string",
+          "examples": ["stripe", "github", "resend"]
+        },
+        "event": {
+          "description": "Event type to handle. Convention is the source's own event name (e.g., Stripe's `checkout.session.completed`).",
+          "type": "string"
+        },
+        "path": {
+          "description": "API route path where the webhook endpoint lives. Must start with `/`.",
+          "type": "string",
+          "pattern": "^/",
+          "examples": ["/api/webhooks/stripe", "/api/webhooks/github"]
+        },
+        "description": {
+          "description": "What happens when the webhook fires. Context for the handler implementation.",
+          "type": "string"
+        },
+        "skills": {
+          "description": "Skills loaded when building the webhook handler.",
+          "type": "array",
+          "items": { "$ref": "#/$defs/SkillName" }
+        }
+      }
+    },
+
+    "Tenancy": {
+      "description": "Multi-tenancy configuration.",
+      "type": "object",
+      "required": ["model", "isolation", "fields", "user_relation"],
+      "additionalProperties": false,
+      "properties": {
+        "model": {
+          "description": "Tenant entity name (lowercase). Determines the generated model, the foreign-key column name (`orgId`, `workspaceId`, etc.), and routing URL segments.",
+          "type": "string",
+          "examples": ["organization", "workspace", "team"]
+        },
+        "isolation": {
+          "description": "How tenant data is isolated. `row-level` adds a tenant foreign-key column to tenant-scoped models and filters at query time. `schema-level` provisions a Postgres schema per tenant.",
+          "type": "string",
+          "enum": ["row-level", "schema-level"]
+        },
+        "fields": {
+          "description": "Fields on the tenant model. Same syntax as `models.<Name>.fields`.",
+          "type": "object",
+          "patternProperties": {
+            "^[a-z][A-Za-z0-9]*$": { "$ref": "#/$defs/FieldValue" }
+          },
+          "additionalProperties": false
+        },
+        "user_relation": {
+          "description": "How users relate to tenants. `one-to-many` = each user belongs to exactly one tenant. `many-to-many` = users can belong to multiple tenants (generates a Membership join model).",
+          "type": "string",
+          "enum": ["one-to-many", "many-to-many"]
+        }
+      }
+    },
+
+    "Rbac": {
+      "description": "Role-based access control configuration.",
+      "type": "object",
+      "required": ["roles", "default_role"],
+      "additionalProperties": false,
+      "properties": {
+        "roles": {
+          "description": "Role definitions. Each role has a name and a list of permission strings. Permission naming is free-form (e.g., `read`, `tickets.update`, `manage_members`); the RBAC Specialist generates a typed permission enum from the union.",
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "required": ["name", "permissions"],
+            "additionalProperties": false,
+            "properties": {
+              "name": {
+                "description": "Role identifier. Used in the generated permission enum and middleware.",
+                "type": "string",
+                "examples": ["owner", "admin", "member", "viewer"]
+              },
+              "permissions": {
+                "description": "List of permission strings granted to this role.",
+                "type": "array",
+                "items": { "type": "string" }
+              }
+            }
+          }
+        },
+        "default_role": {
+          "description": "Role assigned to new users on signup. Must match one of the `roles[].name` values.",
+          "type": "string"
+        }
+      }
+    },
+
+    "Flags": {
+      "description": "Feature flags configuration.",
+      "type": "object",
+      "required": ["provider", "flags"],
+      "additionalProperties": false,
+      "properties": {
+        "provider": {
+          "description": "Where flag values live. `env` = simple FLAG_NAME env vars. `statsig` / `launchdarkly` / `unleash` = external SDK (orchestrator also adds the SDK to integrations).",
+          "type": "string",
+          "enum": ["env", "statsig", "launchdarkly", "unleash"]
+        },
+        "flags": {
+          "description": "Flag definitions. Each flag gets a typed accessor in `src/lib/flags.ts`.",
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["name", "description", "default"],
+            "additionalProperties": false,
+            "properties": {
+              "name": {
+                "description": "Flag identifier. For `provider: env`, becomes the env var `FLAG_{NAME}` uppercased.",
+                "type": "string"
+              },
+              "description": {
+                "description": "What the flag controls. Shown in the generated flags module as a TSDoc comment.",
+                "type": "string"
+              },
+              "default": {
+                "description": "Fallback value when the env var is unset or the provider lookup fails. Usually a boolean but may be a string/number for multi-variant flags.",
+                "type": ["boolean", "string", "number"]
+              }
+            }
+          }
+        }
+      }
+    },
+
+    "SharedPrimitive": {
+      "description": "A cross-feature primitive built before any feature wave.",
+      "type": "object",
+      "required": ["name", "description", "skills"],
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "description": "Primitive identifier. Used in the Wave -1 commit message: `feat(shared): {name}`.",
+          "type": "string",
+          "examples": ["design-system", "api-client"]
+        },
+        "description": {
+          "description": "What the primitive provides. Specialist context.",
+          "type": "string"
+        },
+        "skills": {
+          "description": "Skills loaded when building the primitive.",
+          "type": "array",
+          "items": { "$ref": "#/$defs/SkillName" }
+        }
+      }
+    },
+
+    "Config": {
+      "description": "Per-environment configuration variables. Generates a typed config module at `src/lib/config.ts`.",
+      "type": "object",
+      "required": ["environments", "vars"],
+      "additionalProperties": false,
+      "properties": {
+        "environments": {
+          "description": "Environment names. The generated config module switches on `process.env.NODE_ENV` (or equivalent).",
+          "type": "array",
+          "minItems": 1,
+          "items": { "type": "string" },
+          "examples": [["development", "staging", "production"]]
+        },
+        "vars": {
+          "description": "Map of variable name -> per-environment value object. Each key under a variable should match one of the declared `environments`.",
+          "type": "object",
+          "additionalProperties": {
+            "type": "object",
+            "additionalProperties": {
+              "description": "Value for this environment. Primitive types (string / number / boolean / null) are supported.",
+              "type": ["string", "number", "boolean", "null"]
+            }
+          }
+        }
+      }
+    }
+  },
+
+  "allOf": [
+    {
+      "description": "V2 sections (integrations, jobs, webhooks, tenancy, rbac, flags, shared, config) are only meaningful when `version: 2`. They are allowed in v1 blueprints but silently ignored by the orchestrator.",
+      "if": {
+        "not": {
+          "properties": { "version": { "const": 2 } },
+          "required": ["version"]
+        }
+      },
+      "then": {}
+    }
+  ]
+}

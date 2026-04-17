@@ -108,16 +108,18 @@ commit list, in dependency order:
 
 1. `chore: scaffold next.js + prisma + tailwind`
 2. `feat(shared): design-system primitives`
-3. `feat(auth): github oauth + role-on-signup`
-4. `feat(rbac-foundation): permissions + middleware`
-5. `feat(ticket-crud-api): server actions for tickets`
-6. `feat(ticket-list-table): searchable filterable table`
-7. `feat(ticket-detail-page): RSC ticket detail`
-8. `feat(comment-thread): comments with optimistic updates`
-9. `feat(ticket-create): multi-step new-ticket form`
-10. `feat(ticket-search): postgres full-text search`
-11. `feat(agent-dashboard): KPIs + status chart + my queue`
-12. `feat(email-notifications): resend integration + templates`
-13. `feat(sla-timer-job): cron handler for SLA breaches`
+3. `chore(integration): resend` _(Phase 1.5 — email SDK wrapper + env vars)_
+4. `feat(rbac): permissions module + authorize middleware` _(Wave 0 — from `rbac:` section via RBAC Specialist)_
+5. `feat(auth): github oauth + role-on-signup`
+6. `feat(ticket-crud-api): server actions for tickets`
+7. `feat(ticket-list-table): searchable filterable table`
+8. `feat(ticket-detail-page): RSC ticket detail`
+9. `feat(comment-thread): comments with optimistic updates`
+10. `feat(ticket-create): multi-step new-ticket form`
+11. `feat(ticket-search): postgres full-text search`
+12. `feat(agent-dashboard): KPIs + status chart + my queue`
+13. `feat(email-notifications): resend integration + templates`
 14. `feat(user-management): admin panel for roles`
-15. `test: component + integration coverage`
+15. `chore(job): sla-deadline-checker cron handler` _(Phase 2.7 — from `jobs:` section via Background Jobs Specialist)_
+16. `test: component + integration coverage`
+17. `chore: integration fixes and cleanup` _(Phase 3 — code review pass + production build check)_

@@ -1,0 +1,95 @@
+# =============================================================================
+# billing-stripe — Stripe Checkout, customer portal, and subscription webhooks
+# -----------------------------------------------------------------------------
+# Adds subscription billing via Stripe. Three features cover the lifecycle:
+# checkout (one-time redirect to start a subscription), portal (let the user
+# manage their subscription), and webhook (receive lifecycle events and
+# reconcile local subscription state).
+#
+# What this snippet adds:
+#   - one model: `Subscription` (linked to the tenant model — defaults to
+#     `Organization`; rename `organizationId` to `userId` if you are not using
+#     the multi-tenant snippet)
+#   - three features: `billing-checkout`, `billing-portal`, `billing-webhook`
+#   - one integration entry: `stripe`
+#   - one webhook entry: `stripe-events` for subscription lifecycle
+#   - env vars: STRIPE_SECRET_KEY, STRIPE_WEBHOOK_SECRET, STRIPE_PRICE_PRO,
+#     STRIPE_PRICE_TEAM
+#
+# Where to merge:
+#   - `models:`       → add the `Subscription` model
+#   - `features:`     → append the three feature entries
+#   - `integrations:` → append the `stripe` entry
+#   - `webhooks:`     → append the `stripe-events` entry (create the section
+#                       if missing; requires `version: 2`)
+#
+# Notes:
+#   - depends_on: pair with any `auth-*` feature (e.g. `auth-github`); also
+#     pairs naturally with `multi-tenant` so subscriptions are org-scoped.
+#   - For test mode: use Stripe's test API keys (sk_test_*) and run
+#     `stripe listen --forward-to localhost:3000/api/webhooks/stripe` to
+#     stream events to your local webhook handler. The `stripe listen` CLI
+#     prints a `whsec_*` secret — copy that into STRIPE_WEBHOOK_SECRET.
+#   - Plan price IDs (STRIPE_PRICE_PRO etc.) come from your Stripe dashboard
+#     once you've created products. The Plan enum below is the local
+#     representation; the price ID is the Stripe-side reference.
+# =============================================================================
+
+# === MERGE INTO: models: ===
+# `Plan` is represented as a string-validated enum (free | pro | team) since
+# the Prisma-style schema in this repo doesn't ship a dedicated enum type.
+Subscription:
+  fields:
+    id: cuid
+    organizationId: Organization @relation   # TODO: change to `user: User @relation` if not multi-tenant
+    stripeCustomerId: string @unique
+    stripeSubscriptionId: string? @unique
+    plan: string @default(free)
+      validation: z.enum(["free", "pro", "team"])
+    status: string @default(active)
+      validation: z.enum(["trialing", "active", "past_due", "canceled", "unpaid"])
+    currentPeriodEnd: datetime?
+    createdAt: datetime @default(now())
+    updatedAt: datetime @default(now())
+
+# === MERGE INTO: features: ===
+- name: billing-checkout
+  description: Server Action that creates a Stripe Checkout session and redirects the user to upgrade their subscription
+  skills: [api-design, validation, database]
+  depends_on: [auth-github]   # TODO: replace with whatever auth feature you use
+
+- name: billing-portal
+  description: Server Action that creates a Stripe Billing Portal session so the customer can update payment method or cancel
+  skills: [api-design, validation]
+  depends_on: [billing-checkout]
+
+- name: billing-webhook
+  description: Stripe webhook handler that reconciles Subscription state on checkout.session.completed, customer.subscription.updated, and customer.subscription.deleted events
+  skills: [api-design, validation, database, state-machines]
+  depends_on: [billing-checkout]
+
+# === MERGE INTO: integrations: ===
+- service: stripe
+  purpose: subscription billing (checkout, customer portal, lifecycle webhooks)
+  env_vars:
+    - STRIPE_SECRET_KEY
+    - STRIPE_WEBHOOK_SECRET
+    - STRIPE_PRICE_PRO        # price ID for the "pro" plan
+    - STRIPE_PRICE_TEAM       # price ID for the "team" plan
+  sdk: stripe
+
+# === MERGE INTO: webhooks: ===
+- source: stripe
+  event: checkout.session.completed
+  path: /api/webhooks/stripe
+  description: Verify Stripe signature, then upsert the local Subscription row (plan + status + currentPeriodEnd) for the customer that just completed checkout. Also handles customer.subscription.updated and customer.subscription.deleted via switch on event.type.
+  skills: [api-design, validation, database, state-machines]
+
+# -----------------------------------------------------------------------------
+# Skills referenced (verify these exist in agents/orchestrator.md's Skill
+# Mapping table):
+#   - api-design
+#   - validation
+#   - database
+#   - state-machines
+# -----------------------------------------------------------------------------

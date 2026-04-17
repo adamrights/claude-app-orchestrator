@@ -1,0 +1,63 @@
+# =============================================================================
+# observability-sentry — Sentry error tracking + structured logging
+# -----------------------------------------------------------------------------
+# Adds production-grade observability: Sentry for error capture and release
+# health on both client and server, plus pino-based structured JSON logging
+# with request-id propagation so you can stitch a single request's logs
+# across components.
+#
+# What this snippet adds:
+#   - two features: `error-tracking-sentry`, `structured-logging`
+#   - one integration entry: `sentry`
+#   - env vars: SENTRY_DSN, SENTRY_ORG, SENTRY_PROJECT, SENTRY_AUTH_TOKEN
+#     (the AUTH_TOKEN is only needed at build time for source-map upload)
+#
+# Where to merge:
+#   - `features:`     → append both feature entries
+#   - `integrations:` → append the `sentry` entry (requires `version: 2`)
+#
+# Notes:
+#   - The skill `web-vitals` already documents RUM (Real User Monitoring)
+#     concepts; this snippet wires the actual Sentry SDK. Sentry's
+#     `BrowserTracing` integration captures Web Vitals automatically once
+#     initialized.
+#   - `error-tracking-sentry` initializes Sentry on both client (in
+#     `src/instrumentation-client.ts`) and server (in `src/instrumentation.ts`
+#     for Next.js, or wherever your runtime entrypoint is). User context
+#     (`Sentry.setUser({ id, email })`) is attached after sign-in and cleared
+#     on sign-out.
+#   - `structured-logging` sets up pino with `req.id` propagation. Each
+#     request gets a UUID logged on entry and propagated through any spawned
+#     work; pair with Sentry by including the request ID in error scope.
+#   - depends_on is empty for both features — you can add observability at
+#     any point in the build, even before any auth feature exists.
+# =============================================================================
+
+# === MERGE INTO: features: ===
+- name: error-tracking-sentry
+  description: Initialize Sentry on client and server (BrowserTracing for client, http integration for server), wire an Error Boundary at the root layout that reports to Sentry, attach setUser/clearUser on sign-in and sign-out
+  skills: [error-handling, web-vitals, api-design]
+  depends_on: []
+
+- name: structured-logging
+  description: pino logger with JSON output, request-id middleware that generates a UUID per request and propagates it through async context, enriches Sentry scope so logs and Sentry events share a request ID
+  skills: [error-handling, api-design]
+  depends_on: []
+
+# === MERGE INTO: integrations: ===
+- service: sentry
+  purpose: error tracking, release health, and Web Vitals capture for client and server
+  env_vars:
+    - SENTRY_DSN
+    - SENTRY_ORG
+    - SENTRY_PROJECT
+    - SENTRY_AUTH_TOKEN     # build-time only — used for source-map upload
+  sdk: "@sentry/nextjs"     # TODO: swap to `@sentry/node` for hono-api or `@sentry/react` for vite-react
+
+# -----------------------------------------------------------------------------
+# Skills referenced (verify these exist in agents/orchestrator.md's Skill
+# Mapping table):
+#   - error-handling
+#   - web-vitals
+#   - api-design
+# -----------------------------------------------------------------------------

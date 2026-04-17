@@ -1,0 +1,117 @@
+# =============================================================================
+# multi-tenant — Organization + Membership models with tenant-scoped queries
+# -----------------------------------------------------------------------------
+# Adds B2B multi-tenancy: every domain row is owned by an Organization, users
+# join orgs via Membership rows, and a middleware/skill-driven pattern ensures
+# every query is filtered by the active organization.
+#
+# What this snippet adds:
+#   - two models: `Organization`, `Membership` (the Membership row is the
+#     join table between User and Organization, plus carries the user's role
+#     within that org)
+#   - one `tenancy:` section (v2 — drives orgId foreign-key generation on
+#     other tenant-scoped models)
+#   - one `rbac:` fragment with `default_role: member` (paired with tenancy
+#     for tenant-scoped permission checks)
+#   - three features: `org-create`, `org-invite`, `org-switcher`
+#
+# Where to merge:
+#   - `models:`     → add `Organization` and `Membership`
+#   - `tenancy:`    → REPLACE this top-level section (only one allowed per
+#                     blueprint; requires `version: 2`)
+#   - `rbac:`       → add or extend this top-level section (requires
+#                     `version: 2`)
+#   - `features:`   → append the three feature entries
+#
+# Notes:
+#   - Pairs naturally with the `rbac:` section (it's the only sane way to do
+#     "org owner can invite, member can read"). The roles/permissions you
+#     define in `rbac:` are evaluated against the user's Membership.role for
+#     the active org.
+#   - Application-layer scoping is the default: every Prisma/Drizzle query
+#     gets a `where: { organizationId: ctx.org.id }` clause via a query
+#     wrapper helper. Postgres row-level security is OPTIONAL — useful for
+#     defense-in-depth but adds operational complexity.
+#   - You'll need a way for the user to pick (or be assigned to) an active
+#     organization. The `org-switcher` feature handles that via a header
+#     dropdown and persists the choice in a session cookie.
+#   - depends_on: pair with any `auth-*` feature; user identity is required
+#     before org context exists.
+# =============================================================================
+
+# === MERGE INTO: models: ===
+Organization:
+  fields:
+    id: cuid
+    name: string
+      validation: z.string().min(1).max(100)
+    slug: string @unique
+      validation: z.string().regex(/^[a-z0-9-]+$/).min(3).max(50)
+    members: Membership[]
+    createdAt: datetime @default(now())
+
+Membership:
+  fields:
+    id: cuid
+    user: User @relation
+    organization: Organization @relation
+    role: string @default(member)
+      validation: z.enum(["owner", "admin", "member", "viewer"])
+    invitedBy: User? @relation
+    joinedAt: datetime @default(now())
+
+# === MERGE INTO: tenancy: ===
+# Replace the top-level `tenancy:` section with this. Only one tenancy block
+# is allowed per blueprint. The orchestrator uses this to add `organizationId`
+# foreign keys to other tenant-scoped models during schema generation.
+model: organization
+isolation: row-level
+fields:
+  name: string
+  slug: string @unique
+  plan: string @default(free)
+user_relation: many-to-many
+
+# === MERGE INTO: rbac: ===
+# Pair these roles with the tenancy section above. The RBAC Specialist scopes
+# every permission check to the user's Membership.role within the active org.
+roles:
+  - name: owner
+    permissions: [manage_org, manage_members, manage_billing, read, write, delete]
+  - name: admin
+    permissions: [manage_members, read, write, delete]
+  - name: member
+    permissions: [read, write]
+  - name: viewer
+    permissions: [read]
+default_role: member
+
+# === MERGE INTO: features: ===
+- name: org-create
+  description: Server Action and form to create a new Organization, with the creator inserted as the owner Membership in the same transaction
+  skills: [api-design, validation, database, react-component, forms]
+  depends_on: [auth-github]   # TODO: replace with whatever auth feature you use
+
+- name: org-invite
+  description: Email-based invite flow — owner/admin issues an invite, recipient signs in, Membership row is created with the invited role
+  skills: [api-design, validation, database, forms]
+  depends_on: [org-create]
+
+- name: org-switcher
+  description: Header dropdown listing the user's Memberships; selecting one persists the active organizationId in a session cookie consumed by the tenant-scoped query wrapper
+  skills: [react-component, react-hooks, state-management]
+  depends_on: [org-create]
+
+# -----------------------------------------------------------------------------
+# Skills referenced (verify these exist in agents/orchestrator.md's Skill
+# Mapping table). Note: `rbac` is NOT a skill — it's a top-level blueprint
+# section. The RBAC Specialist agent is dispatched automatically when the
+# `rbac:` section is present; you do not list it as a feature skill.
+#   - api-design
+#   - validation
+#   - database
+#   - react-component
+#   - react-hooks
+#   - state-management
+#   - forms
+# -----------------------------------------------------------------------------

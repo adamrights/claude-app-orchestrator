@@ -1,0 +1,56 @@
+# =============================================================================
+# auth-github — GitHub OAuth login via NextAuth
+# -----------------------------------------------------------------------------
+# Adds GitHub OAuth sign-in to a fullstack Next.js blueprint. Uses NextAuth's
+# built-in GitHub provider, so no extra SDK install is needed beyond NextAuth
+# itself (which the default `nextjs-prisma-tailwind` template already wires).
+#
+# What this snippet adds:
+#   - one feature: `auth-github`
+#   - one integration entry: `github-oauth` (purpose + env vars only — the SDK
+#     line is `next-auth` since NextAuth ships the GitHub provider)
+#   - env vars: GITHUB_ID, GITHUB_SECRET, NEXTAUTH_SECRET
+#
+# Where to merge:
+#   - `features:`     → append the `auth-github` entry
+#   - `integrations:` → append the `github-oauth` entry (create the section if
+#                       missing; requires `version: 2` at the top of your
+#                       blueprint for integrations to be processed)
+#   - `stack.auth:`   → set to `github` if you want the scaffold to wire the
+#                       NextAuth GitHub provider automatically
+#
+# Notes:
+#   - Assumes the default Next.js fullstack template (NextAuth-based). If your
+#     blueprint targets `stack.type: spa` (Vite) or `stack.type: api` (Hono),
+#     use a different auth snippet — those templates do not ship NextAuth.
+#   - Generate NEXTAUTH_SECRET with `openssl rand -base64 32`.
+#   - Create the GitHub OAuth app at https://github.com/settings/developers
+#     with callback URL `http://localhost:3000/api/auth/callback/github` for dev.
+# =============================================================================
+
+# === MERGE INTO: features: ===
+- name: auth-github
+  description: GitHub OAuth login/logout via NextAuth, session-bound user record on first sign-in
+  skills: [authentication, react-hooks, validation]
+  depends_on: []
+
+# === MERGE INTO: integrations: ===
+- service: github-oauth
+  purpose: GitHub OAuth sign-in via NextAuth's built-in GitHub provider
+  env_vars:
+    - GITHUB_ID
+    - GITHUB_SECRET
+    - NEXTAUTH_SECRET
+  sdk: next-auth
+
+# === MERGE INTO: stack: ===
+# Optional — sets the scaffold to wire the NextAuth GitHub provider for you.
+auth: github
+
+# -----------------------------------------------------------------------------
+# Skills referenced (verify these exist in your blueprint's known skill set
+# and in agents/orchestrator.md's Skill Mapping table):
+#   - authentication
+#   - react-hooks
+#   - validation
+# -----------------------------------------------------------------------------
