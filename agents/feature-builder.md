@@ -17,6 +17,7 @@ The orchestrator will pass you:
 - `knowledge_repo` — path to the knowledge repo (for reading skill files)
 - `project_claude_md` — path to the project's CLAUDE.md inside the worktree
 - `contract_path` — (only present when called as part of a layer-level split) path to a TypeScript contract file your work must conform to
+- `available_integrations` — (optional) map of integration names to their typed-client module paths — e.g. `{ "resend": "src/integrations/resend.ts", "stripe": "src/lib/stripe.ts" }`. These were installed in Phase 1.5 before any feature waves. If your feature needs functionality that one of these wrappers provides, **import from the path** rather than re-installing the SDK or hand-rolling a client.
 
 ## Workflow
 
@@ -48,6 +49,7 @@ The orchestrator validates your manifest against every other running worker's ma
 ### Step 1 onward: Build
 
 1. **Read the project's CLAUDE.md** at `{worktree_path}/CLAUDE.md`. This tells you the tech stack, commands, and conventions. Treat it as authoritative for project-level decisions.
+   - If `available_integrations` is non-empty, note each integration's module path. When your feature needs that integration's capability (e.g., sending an email when `resend` is in the map), **import from the typed wrapper** — do not run `npm install` for it, do not hand-roll a new client. If a needed integration is NOT in the map, report back before proceeding — installing your own would fork the architecture.
 
 2. **Read the skill files** listed in `feature.skills`. Resolve short names using the orchestrator's mapping table (or grep `{knowledge_repo}/skills/**/*.md` for unfamiliar names). Treat each skill's "Guidelines" and "Checklist" sections as requirements.
 

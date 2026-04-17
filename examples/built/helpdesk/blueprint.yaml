@@ -217,7 +217,11 @@ pages:
 # from the RBAC Specialist in Wave 0 as part of the rbac: section, not a
 # feature), but the leaf features (search, dashboard, email) fan out.
 # -----------------------------------------------------------------------------
-execution: auto
+execution: sequential  # Pre-flight for first live build: dodges the parallel-mode
+                       # worker-prompt vs feature-builder Step 0 protocol contradiction
+                       # (P0 in VALIDATION_REPORT.md). Also, tabletop showed Wave 3
+                       # would trip the 4-feature safety cap and fall back to
+                       # sequential anyway — this makes the choice explicit.
 
 # -----------------------------------------------------------------------------
 # Features — the buildable units. Order matters only for readability; the

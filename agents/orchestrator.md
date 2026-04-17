@@ -173,6 +173,16 @@ Apply in order; first match wins:
 
 ---
 
+## Canonical phase ordering
+
+The sections that follow (Phase 1.5, Pre-Wave Shared Primitives, RBAC Dispatch) each describe themselves as running "before features." The canonical order when all three apply to a blueprint is:
+
+**Phase 1 (Scaffold) → Phase 1.5 (Integrations) → Pre-Wave (Shared Primitives) → Wave 0 (RBAC Dispatch, then features) → subsequent waves.**
+
+Rationale: integrations install typed clients that shared primitives + features may import. Shared primitives (design system, env validator, etc.) may need integration modules already in place. RBAC Dispatch runs as the first step of Wave 0 so the permissions module is importable by every Wave 0+ feature. If a shared primitive needs an integration-installed module, it runs after Phase 1.5 as specified. If a shared primitive does NOT need any integration, it may still run after Phase 1.5 — ordering is fixed, not dependency-driven.
+
+---
+
 ## Phase 1.5: Integrations (v2 only)
 
 If the blueprint has an `integrations:` section, process each integration entry through the Integration Specialist (`agents/integration-specialist.md`) BEFORE any feature waves. Integrations can run in parallel if they are independent (they typically are — each installs a different SDK and writes to a different file).
@@ -248,7 +258,7 @@ For each agent you spawn:
 
 1. Create a worktree for the feature using the Agent tool with `isolation: "worktree"`. The worktree is automatically created on a branch named after the feature.
 2. Use the agent definition at `agents/feature-builder.md` as the worker.
-3. Pass a **self-contained prompt** with all necessary context (the agent has no memory of this conversation):
+3. Pass a **self-contained prompt** with all necessary context (the agent has no memory of this conversation). Compute `available_integrations` from Phase 1.5's installed integrations (map of `{service_name: module_path}` for every integration successfully installed; empty `{}` if Phase 1.5 had no integrations or was skipped).
 
    ```
    You are a Feature Builder. Read agents/feature-builder.md for your workflow.
@@ -260,6 +270,10 @@ For each agent you spawn:
    Worktree: <auto-set by isolation>
    Knowledge repo: {knowledge_repo}
    Project CLAUDE.md: <worktree>/CLAUDE.md
+
+   Available integrations: {available_integrations}
+   (map of service_name → module path; import from these instead of
+   installing SDKs yourself. Empty {} means no integrations are installed.)
 
    Build this feature in your worktree. Run tests. Commit.
    Report back with the standard FEATURE BUILDER REPORT format.

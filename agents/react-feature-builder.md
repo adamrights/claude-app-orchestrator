@@ -27,6 +27,17 @@ You are an agent that builds complete React features from a brief description. Y
 - When a contract exists, never re-declare types — import from the contract file.
 - The contract's types are your API surface — don't make assumptions about additional fields.
 
+## Testing-focused features
+
+When `feature.skills` includes `react-testing` or `e2e-testing` (or `feature.name` is `tests`), the feature's job is to write tests AGAINST EXISTING components and flows — not to build new ones. **Do not create new components under `src/` for a testing feature.** Replace steps 3–4 of the Workflow with:
+
+1. **Enumerate the existing critical paths** the blueprint's `features[].description` (on prior features) and `pages:` list. For the helpdesk: ticket creation flow, ticket detail + status transitions, comment thread with role-gated internal notes, RBAC enforcement across pages, admin user-management.
+2. **For each critical component** the feature lists in its description: read the component file, write an `*.test.tsx` next to it using React Testing Library + Vitest. Focus on user-visible behavior: rendered output, interaction effects, accessibility roles. Avoid testing implementation details (internal state names, specific class strings).
+3. **For `e2e-testing`**: scaffold Playwright under `tests/e2e/` — one `{flow}.spec.ts` per critical path. Include `playwright.config.ts` if missing, plus a `tests/e2e/fixtures.ts` with test-user seeding (customer, agent, admin). Use the project's existing dev server start command in `webServer.command`.
+4. **Run `npm test` and `npm run test:e2e`** (or whatever the project's `package.json` defines). If a test reveals a real bug in an existing feature, report it in the FEATURE BUILDER REPORT's `notes` field — do NOT fix it in the testing feature's commit; that's a separate concern for the debugger.
+
+Commit message: `test: {feature.description}` (test prefix, not feat).
+
 ## Related skills
 
 When working on features involving data display, forms, or interactions, also consider loading these skills as relevant:
