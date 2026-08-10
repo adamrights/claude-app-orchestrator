@@ -16,6 +16,13 @@
 #   triggers    — when an agent should load this skill
 
 skills:
+  # --- planning ---
+  - name: decision-mapping
+    path: skills/planning/decision-mapping.md
+    layer: planning
+    description: Wayfinder maps — decision tickets, resolutions, map hygiene, anti-patterns
+    triggers: wayfinding sessions; any plan that must survive session boundaries
+
   # --- frontend: foundations ---
   - name: react-component
     path: skills/frontend/react-component.md

@@ -567,6 +567,7 @@ When a feature references a skill by short name, resolve it to a file path. This
 
 | Short name | File path | Layer |
 |------------|-----------|-------|
+| `decision-mapping` | `skills/planning/decision-mapping.md` | planning |
 | `react-component` | `skills/frontend/react-component.md` | frontend |
 | `react-hooks` | `skills/frontend/react-hooks.md` | frontend |
 | `state-management` | `skills/frontend/state-management.md` | frontend |

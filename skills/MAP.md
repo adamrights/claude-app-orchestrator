@@ -2,7 +2,7 @@
 
 <!-- Generated from skills/manifest.yaml by scripts/build-skill-map.mjs. Do not edit by hand: edit the manifest, then run `node scripts/build-skill-map.mjs`. -->
 
-36 skills. Short names are what blueprint `skills:` arrays and agents use; the Layer column drives the orchestrator's splittable-feature detection (only `frontend` and `backend` count toward a layer split).
+37 skills. Short names are what blueprint `skills:` arrays and agents use; the Layer column drives the orchestrator's splittable-feature detection (only `frontend` and `backend` count toward a layer split).
 
 ## backend
 
@@ -52,6 +52,12 @@
 | [`pagination`](frontend/pagination.md) | frontend | Cursor vs offset, infinite scroll, URL state | any list too long for one response |
 | [`performance`](frontend/performance.md) | frontend | Code splitting, virtualization, memoization, bundle size, React Compiler | perf work, large lists, heavy bundles, slow renders |
 | [`web-vitals`](frontend/web-vitals.md) | frontend | LCP/INP/CLS, Profiler API, RUM, performance budgets | measuring or fixing Core Web Vitals; perf audits |
+
+## planning
+
+| Skill | Layer | What it covers | Load when |
+|-------|-------|----------------|-----------|
+| [`decision-mapping`](planning/decision-mapping.md) | planning | Wayfinder maps — decision tickets, resolutions, map hygiene, anti-patterns | wayfinding sessions; any plan that must survive session boundaries |
 
 ## testing
 
