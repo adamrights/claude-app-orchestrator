@@ -111,7 +111,7 @@ function loadSkillMapping() {
 function checkSkillMapping(mapping) {
   process.stdout.write(`  ${C.dim('-')} skill mapping: `);
   const allSkillFiles = walk(join(repoRoot, 'skills'),
-    (p) => p.endsWith('.md') && !p.endsWith('README.md'));
+    (p) => p.endsWith('.md') && !p.endsWith('README.md') && !p.endsWith('MAP.md'));
   const allSkillRel = new Set(allSkillFiles.map(p => rel(p)));
 
   // Verify every mapping path exists.

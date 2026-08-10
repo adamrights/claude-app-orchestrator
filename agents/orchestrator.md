@@ -472,7 +472,10 @@ If the orchestrator restarts mid-build (user interruption, network failure, etc.
 
 ## Skill Mapping
 
-When a feature references a skill by short name, resolve it to a file path:
+When a feature references a skill by short name, resolve it to a file path. This table is generated from `skills/manifest.yaml` (the single source of truth — see `skills/MAP.md` for the browsable version with descriptions):
+
+<!-- BEGIN GENERATED: skill-map -->
+<!-- Generated from skills/manifest.yaml by scripts/build-skill-map.mjs. Do not edit by hand: edit the manifest, then run `node scripts/build-skill-map.mjs`. -->
 
 | Short name | File path | Layer |
 |------------|-----------|-------|
@@ -484,19 +487,19 @@ When a feature references a skill by short name, resolve it to a file path:
 | `error-handling` | `skills/frontend/error-handling.md` | frontend |
 | `forms` | `skills/frontend/forms.md` | frontend |
 | `accessibility` | `skills/frontend/accessibility.md` | frontend |
-| `optimistic-updates` | `skills/frontend/optimistic-updates.md` | frontend |
-| `data-tables` | `skills/frontend/data-tables.md` | frontend |
-| `pagination` | `skills/frontend/pagination.md` | frontend |
-| `data-fetching` | `skills/frontend/data-fetching.md` | frontend |
-| `performance` | `skills/frontend/performance.md` | frontend |
 | `server-components` | `skills/frontend/server-components.md` | frontend |
 | `concurrent-react` | `skills/frontend/concurrent-react.md` | frontend |
 | `composition-patterns` | `skills/frontend/composition-patterns.md` | frontend |
 | `typescript-patterns` | `skills/frontend/typescript-patterns.md` | shared |
 | `design-system` | `skills/frontend/design-system.md` | frontend |
 | `animations` | `skills/frontend/animations.md` | frontend |
-| `web-vitals` | `skills/frontend/web-vitals.md` | frontend |
 | `state-machines` | `skills/frontend/state-machines.md` | shared |
+| `optimistic-updates` | `skills/frontend/optimistic-updates.md` | frontend |
+| `data-fetching` | `skills/frontend/data-fetching.md` | frontend |
+| `data-tables` | `skills/frontend/data-tables.md` | frontend |
+| `pagination` | `skills/frontend/pagination.md` | frontend |
+| `performance` | `skills/frontend/performance.md` | frontend |
+| `web-vitals` | `skills/frontend/web-vitals.md` | frontend |
 | `api-design` | `skills/backend/api-design.md` | backend |
 | `database` | `skills/backend/database.md` | backend |
 | `authentication` | `skills/backend/authentication.md` | shared |
@@ -512,6 +515,8 @@ When a feature references a skill by short name, resolve it to a file path:
 | `secrets` | `skills/devops/secrets.md` | devops |
 | `react-testing` | `skills/testing/react-testing.md` | testing |
 | `e2e-testing` | `skills/testing/e2e-testing.md` | testing |
+
+<!-- END GENERATED: skill-map -->
 
 The "Layer" column is used by the splittable-feature detection in Phase 0 and by the layer-level split in Phase 2.
 
