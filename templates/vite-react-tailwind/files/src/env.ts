@@ -13,7 +13,10 @@ import { z } from 'zod';
 export const env = createEnv({
   clientPrefix: 'VITE_',
   client: {
-    VITE_API_URL: z.string().url(),
+    // Optional so a serverless SPA (no API at all) scaffolds cleanly.
+    // If your app requires an API, drop `.optional()` so a missing URL
+    // fails at boot instead of at first fetch.
+    VITE_API_URL: z.string().url().optional(),
   },
   runtimeEnv: import.meta.env,
   emptyStringAsUndefined: true,

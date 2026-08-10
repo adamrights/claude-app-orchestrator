@@ -40,6 +40,6 @@ Reversing a decision is allowed but explicit: tell the orchestrator, and it reco
 
 **Can I edit map.yaml by hand?** Don't, mid-build. Between sessions, the legitimate edit is deleting the file to force a from-report reconstruction — anything finer-grained, tell the orchestrator what you want instead.
 
-**Does the map go in git?** It's written inside your app's output directory but is build tooling, not app code. The templates' `.gitignore` doesn't exclude it by default — commit it if you want build provenance in history, ignore `.claude-build/` if you don't.
+**Does the map go in git?** It's written inside your app's output directory but is build tooling, not app code. Feature commits always exclude it (`git add -A ':!.claude-build'`) so journal churn never lands in feature diffs. If you want build provenance in history, ask the orchestrator to commit it in dedicated `chore(build-map)` commits; if you don't, add `.claude-build/` to your app's `.gitignore`.
 
 **What if I changed the blueprint on purpose?** That's a new build contract. Options: restore the old blueprint and `/resume`, or accept a fresh `/orchestrate` run (the orchestrator's crash-recovery will still skip features whose commits exist and still match).

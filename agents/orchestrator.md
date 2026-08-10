@@ -170,8 +170,9 @@ Always sequential. No changes from the original workflow.
    - If the blueprint has a `flags:` section:
      - For `provider: env`, generate a typed flags module at `src/lib/flags.ts` that reads `FLAG_{NAME}` env vars and exports typed boolean accessors. Add the flag env vars to `.env.example`.
      - For external providers (`statsig`, `launchdarkly`, `unleash`), generate a flags module that wraps the provider's SDK. Add the provider to the integration pipeline (Phase 1.5).
-8. Run the post-scaffold commands listed in `scaffold.yaml` (typically `npm install`, `npx prisma generate`).
-9. Initialize git: `git init && git add -A && git commit -m "chore: scaffold from {template}"`
+8. Initialize git: `git init`. This MUST happen before the post-scaffold commands — templates use husky, whose `prepare` script runs during `npm install` and silently no-ops if `.git` doesn't exist yet, leaving hooks uninstalled for the whole build.
+9. Run the post-scaffold commands listed in `scaffold.yaml` (typically `npm install`, `npx prisma generate`).
+10. Commit the scaffold: `git add -A && git commit -m "chore: scaffold from {template}"`
 
 ### Template Resolution Rules
 
@@ -515,6 +516,8 @@ Update the map (and its `updated` timestamp) at every one of these boundaries �
 
 The write is cheap — a small YAML file — and it is the entire difference between "resume in 30 seconds" and "archaeology through git log."
 
+**Keep the journal out of feature commits.** Every feature/wave commit must exclude the journal (`git add -A ':!.claude-build'`) — otherwise the constantly-changing map gets interleaved into unrelated feature diffs. If the user wants build provenance in history, commit the journal separately as `chore(build-map): {phase/wave}` commits; otherwise leave it untracked (optionally add `.claude-build/` to the project's `.gitignore` at scaffold time if the user asks).
+
 ### Decision Escalation
 
 Workers must not guess on decisions the blueprint doesn't answer (see `agents/feature-builder.md`, Decision Escalation). When a worker reports `status: blocked-on-decision` with a `DECISION NEEDED` block:
@@ -532,7 +535,9 @@ On invocation, if `{output_dir}/.claude-build/map.yaml` exists:
 
 1. **Verify the blueprint hash.** If `blueprint_sha256` no longer matches the blueprint file, STOP and tell the user the blueprint changed mid-build — they must either restore it or accept a fresh build. Never continue a build against a mutated blueprint.
 2. **Cross-check against git**: every unit marked `done` must have its commit reachable in `{output_dir}` history (`git cat-file -e {sha}`). A `done` unit with a missing commit is corrupt state — mark it `pending` again and tell the user.
-3. **Reconcile `in-progress` units**: a unit stuck `in-progress` from a dead session is `pending` again (its worktree, if any, is abandoned — check `git worktree list` and prune).
+3. **Reconcile `in-progress` units**: a unit stuck `in-progress` from a dead session is `pending` again.
+   - **Parallel mode**: its worktree is abandoned — check `git worktree list` and prune.
+   - **Sequential mode**: the dead session may have left uncommitted changes in the working tree. Run `git status`, show the user what's there, and keep files that fall inside the reconciled unit's scope (its `touches:` manifest or obvious feature paths) — the rebuilt feature will absorb or overwrite them. Never `git clean`/`git checkout --` silently; if a leftover file is outside every pending unit's scope, ask before discarding.
 4. Reprint the execution plan with ✓/⏳/○ per unit, list decisions so far, then continue from the first pending unit in canonical phase order.
 
 If the map is missing but `BUILD_REPORT.md` exists (a pre-Build-Map build), fall back to the legacy crash recovery: parse the report, cross-check `git log`, and *create* the map before continuing so the build is journaled from here on.
@@ -592,6 +597,7 @@ When a feature references a skill by short name, resolve it to a file path. This
 | `design-system` | `skills/frontend/design-system.md` | frontend |
 | `animations` | `skills/frontend/animations.md` | frontend |
 | `state-machines` | `skills/frontend/state-machines.md` | shared |
+| `client-persistence` | `skills/frontend/client-persistence.md` | frontend |
 | `optimistic-updates` | `skills/frontend/optimistic-updates.md` | frontend |
 | `data-fetching` | `skills/frontend/data-fetching.md` | frontend |
 | `data-tables` | `skills/frontend/data-tables.md` | frontend |

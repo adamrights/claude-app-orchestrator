@@ -73,9 +73,9 @@ The orchestrator validates your manifest against every other running worker's ma
    - Fix and re-run
    - Do NOT skip or comment out failing tests
 
-9. **Commit** all changes to the worktree branch:
+9. **Commit** all changes to the worktree branch, excluding the build journal (it belongs to the orchestrator, never to feature commits):
    ```
-   git add -A
+   git add -A ':!.claude-build'
    git commit -m "feat: {feature.name} - {feature.description}"
    ```
 

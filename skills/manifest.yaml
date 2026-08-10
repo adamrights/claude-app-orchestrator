@@ -116,6 +116,12 @@ skills:
     triggers: multi-step flows with distinct states (wizards, uploads, checkout)
 
   # --- frontend: data & performance ---
+  - name: client-persistence
+    path: skills/frontend/client-persistence.md
+    layer: frontend
+    description: localStorage/IndexedDB — versioned keys, migrations, validated loads, quota-safe writes
+    triggers: any browser-stored user data; serverless SPAs; offline/draft caching
+
   - name: optimistic-updates
     path: skills/frontend/optimistic-updates.md
     layer: frontend
