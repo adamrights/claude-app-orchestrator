@@ -139,6 +139,15 @@ Splittable features: [todo-list-ui]
 
 Write the initial `.claude-build/map.yaml` in `{output_dir}` per the Build Map contract (see `## Build Map` below): blueprint path + hash, the plan you just printed, every unit `pending`. From this point on, every phase/wave boundary updates the map — it is what makes the build resumable across sessions.
 
+**Wayfinder decision import.** If the blueprint came out of a `/wayfind` session, its decision trail must survive the handoff:
+
+1. Find the wayfinder map: a `# wayfinder-map: {path}` comment in the blueprint's first 5 lines (path relative to the blueprint), or failing that, a sibling `*.map.md` whose `blueprint:` header resolves to this blueprint file.
+2. No map found → skip silently; a blueprint does not need a map.
+3. Map found with `status: ready` (or `built`) → import every **resolved** ticket as an entry in the Build Map's `decisions:` list: `id: W{ticket-number}`, `question` from the ticket title, `decision` from the map's gist line, `resolved_by: wayfinder`, plus a `source:` pointing at the map file and ticket anchor. Tell the user how many decisions were imported. Do not copy full resolutions — the map remains their home; the Build Map entry gists and points.
+4. Map found with any other status → the frontier is unresolved. Warn the user (list the open tickets), and ask whether to build anyway or finish wayfinding first. Do not silently build from an unready map.
+
+Imported decisions flow to workers through `build_decisions` exactly like decisions made mid-build: a Feature Builder facing "soft or hard delete?" finds the wayfinder's answer already in its inputs instead of escalating a question that was settled before the build began. After the build completes (Phase 3), set the map's header to `status: built`.
+
 ---
 
 ## Phase 1: Scaffold
@@ -487,7 +496,7 @@ decisions:                 # every decision made after the blueprint was frozen
     unit: feature:todo-crud-api
     question: "Delete = soft delete (deletedAt) or hard delete?"
     options: ["soft delete", "hard delete"]
-    resolved_by: user      # user | orchestrator | blueprint
+    resolved_by: user      # user | orchestrator | blueprint | wayfinder
     decision: "Hard delete — no audit requirement in the destination."
     date: 2026-08-10T17:20:00Z
 ```

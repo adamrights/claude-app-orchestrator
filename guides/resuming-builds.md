@@ -5,7 +5,7 @@ Some apps are bigger than one Claude Code session. A 20-feature blueprint can ou
 The **Build Map** fixes both problems. It is a small machine-readable journal at `{output_dir}/.claude-build/map.yaml` that the orchestrator writes at every phase and wave boundary:
 
 - **Units** — every piece of work (`scaffold`, each `integration:*`, each `feature:*`, each `wave-merge:*`, `review`) with a status and, once done, its commit SHA.
-- **Decisions** — every question that came up *after* the blueprint was frozen, who resolved it (blueprint / orchestrator / you), and what was decided.
+- **Decisions** — every question that came up *after* the blueprint was frozen, who resolved it (blueprint / orchestrator / you / a prior `/wayfind` session), and what was decided. Blueprints emitted by `/wayfind` get their map's resolved tickets imported here at build start.
 - **Integrity anchors** — the blueprint's SHA-256 at build start, so a resumed session refuses to continue against a blueprint that changed mid-build.
 
 `BUILD_REPORT.md` still exists and is still the thing you read; the map is the thing the *next session* reads.

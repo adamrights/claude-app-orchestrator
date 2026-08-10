@@ -49,6 +49,8 @@ Rule of thumb: wayfind when you'd otherwise start the build to *find out* what y
 
 **Can I edit the map by hand?** Yes — it's yours. Keep the format (statuses, gist lines) so a resuming session can compute the frontier.
 
+**Do the map's decisions reach the build?** Yes. The emitted blueprint carries a `# wayfinder-map:` comment; `/orchestrate` follows it and imports every resolved ticket into the build's decision log (`.claude-build/map.yaml`), so Feature Builders see wayfinding answers in `build_decisions` instead of re-asking them. After a successful build the map's status flips to `built`.
+
 **What if a decision turns out wrong mid-build?** The build phase treats the blueprint as source of truth and stops when it's wrong. Reopen the relevant ticket on the map, re-resolve, update the blueprint, and re-run. Never edit the blueprint mid-build.
 
 **Do small apps need a map?** No. See "When to skip wayfinding."

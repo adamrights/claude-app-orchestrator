@@ -13,6 +13,8 @@ You are executing the `/orchestrate` slash command for claude-app-orchestrator. 
 
 3. **Pre-flight validate.** Run `node $KB_PATH/scripts/validate-blueprint.mjs $1` via Bash. If exit code is non-zero, show the validator output and abort. Do not attempt to build a blueprint that didn't validate.
 
+3b. **Check for a wayfinder map.** If the blueprint's first 5 lines contain `# wayfinder-map: {path}`, or a sibling `*.map.md` points at this blueprint, report it: "Found wayfinder map at {path} (status: {status}) — its decisions will be imported into the Build Map." If the map's status is not `ready`/`built`, warn that the frontier is unresolved and ask before building (the orchestrator repeats this check authoritatively in its Step 8).
+
 4. **Build.** Read `$KB_PATH/agents/orchestrator.md` and follow its instructions to build `$1` into the resolved output directory. The orchestrator handles scaffolding, feature dispatch, and integration phases on its own.
 
 5. **Summarize.** When the orchestrator finishes, read `<output-directory>/BUILD_REPORT.md` (the orchestrator writes it incrementally). Show the user a 5-bullet summary: what was built, where, what to do next, what env vars are still needed, what wasn't done. Do not paste the full report — just the takeaways.
