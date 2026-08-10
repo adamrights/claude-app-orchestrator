@@ -18,6 +18,7 @@ The orchestrator will pass you:
 - `project_claude_md` — path to the project's CLAUDE.md inside the worktree
 - `contract_path` — (only present when called as part of a layer-level split) path to a TypeScript contract file your work must conform to
 - `available_integrations` — (optional) map of integration names to their typed-client module paths — e.g. `{ "resend": "src/integrations/resend.ts", "stripe": "src/lib/stripe.ts" }`. These were installed in Phase 1.5 before any feature waves. If your feature needs functionality that one of these wrappers provides, **import from the path** rather than re-installing the SDK or hand-rolling a client.
+- `build_decisions` — (optional) list of decisions already made for this build, from the Build Map's `decisions:` log. Each has `question`, `decision`, `resolved_by`. Treat every entry as settled — never re-decide one, even if you disagree.
 
 ## Workflow
 
@@ -62,7 +63,7 @@ The orchestrator validates your manifest against every other running worker's ma
    - API routes, database queries, server logic → use `agents/api-endpoint-builder.md`
    - A feature touching both (and no contract was given) → build the API first, then the UI
 
-6. **Build the feature**. Write code following the loaded skill guidelines and project conventions.
+6. **Build the feature**. Write code following the loaded skill guidelines and project conventions. When you hit a decision the blueprint doesn't answer, apply the Decision Escalation rules below — do not guess on one-way doors.
 
 7. **Emit heartbeats** — see the Heartbeat Contract section below. Append to `{worktree_path}/.claude-progress.log` at least every 60 seconds, and after every meaningful step. If the orchestrator sees no new lines for 5 minutes it will kill you as stalled.
 
@@ -85,7 +86,7 @@ The orchestrator validates your manifest against every other running worker's ma
     feature: {name}
     branch: {branch_name}
     worktree: {worktree_path}
-    status: success | failure | rejected
+    status: success | failure | rejected | blocked-on-decision
     touches:
       create: [list of paths actually created]
       modify: [list of paths actually modified]
@@ -98,6 +99,38 @@ The orchestrator validates your manifest against every other running worker's ma
     ```
 
     The resolved `touches:` manifest in the report MUST reflect the **actual** files you created and modified, not the original declaration. The orchestrator uses this to decide which files need arbitration in Phase 2.5.
+
+## Decision Escalation
+
+Mid-build you will hit questions the blueprint + skills + project CLAUDE.md don't answer. Sort each one:
+
+- **Two-way door** (cheap to reverse later: a variable name, a spacing value, list vs. grid when both are fine): pick the option most consistent with existing code, note it in your report's `notes`, and keep moving. Do not escalate these — an orchestrator round-trip costs more than the reversal would.
+- **One-way door** (expensive or impossible to reverse: schema shape, soft vs. hard delete, auth/session semantics, anything destructive, anything another feature will build on top of): **stop. Do not guess.**
+
+For a one-way door:
+
+1. Check `build_decisions` — the question may already be settled. If it is, follow the recorded decision exactly.
+2. If not settled, emit a heartbeat with stage `blocked`, then report back immediately:
+
+    ```
+    FEATURE BUILDER REPORT
+    feature: {name}
+    branch: {branch_name}
+    worktree: {worktree_path}
+    status: blocked-on-decision
+    decision_needed:
+      question: "Delete = soft delete (deletedAt) or hard delete?"
+      options: ["soft delete", "hard delete"]
+      recommendation: "soft delete — Ticket rows are referenced by audit-ish views"
+      why_one_way: "schema + every query filters on it; reversing rewrites both"
+    touches: {create: [...], modify: [...]}   # what you did BEFORE blocking
+    commit_sha: {sha of WIP commit, if any}
+    ```
+
+3. Commit any completed, coherent work-in-progress first (`wip: {feature.name} — blocked on decision`) so nothing is lost, but never commit half-implemented guesses at the undecided behavior.
+4. The orchestrator will resolve the question (possibly by asking the user), record it in the Build Map, and re-dispatch you with the decision in `build_decisions`. Resume from your WIP commit.
+
+The test for "is this a one-way door?": *if the orchestrator later told me the other option was correct, would I have to rewrite more than this feature's own files to comply?* Yes → escalate.
 
 ## Constraints
 
@@ -127,7 +160,7 @@ Each line is plain text, one per newline, in this exact shape:
 ```
 
 - `timestamp` — UTC ISO-8601 (e.g., `2026-04-11T14:32:07Z`).
-- `stage` — one of: `kickoff`, `reading-skills`, `reading-project`, `writing-files`, `running-tests`, `debugging`, `committing`, `reporting`. Use the stage that best describes what you're doing at that moment.
+- `stage` — one of: `kickoff`, `reading-skills`, `reading-project`, `writing-files`, `running-tests`, `debugging`, `blocked`, `committing`, `reporting`. Use the stage that best describes what you're doing at that moment.
 - `message` — a short human-readable note. One line, no embedded newlines.
 
 Example log:
@@ -152,3 +185,4 @@ If you cannot complete the feature, stop and report with a clear `status` and ex
 
 - **`status: failure`** — You got past kickoff but could not finish: tests fail you cannot fix, a skill file is missing, a contract is inadequate, a build command errors out, etc. Report what happened and what you tried.
 - **`status: rejected`** — The orchestrator rejected your kickoff because your `touches:` manifest overlaps another running worker's manifest in a way it cannot resolve. When you receive a rejection, stop immediately. **Do not write any files.** Return the report with `status: rejected` and an empty `files_changed`, `files_added`, and `files_deleted`. The orchestrator will reschedule you to a later wave or route you through the Shared Resource Arbitrator.
+- **`status: blocked-on-decision`** — Not a failure. You hit a one-way-door decision the blueprint doesn't answer — see Decision Escalation above. Commit coherent WIP, report the `decision_needed` block, and expect to be re-dispatched with the answer in `build_decisions`.

@@ -135,6 +135,10 @@ Waves: 3
 Splittable features: [todo-list-ui]
 ```
 
+### Step 8: Initialize the Build Map
+
+Write the initial `.claude-build/map.yaml` in `{output_dir}` per the Build Map contract (see `## Build Map` below): blueprint path + hash, the plan you just printed, every unit `pending`. From this point on, every phase/wave boundary updates the map — it is what makes the build resumable across sessions.
+
 ---
 
 ## Phase 1: Scaffold
@@ -274,6 +278,12 @@ For each agent you spawn:
    Available integrations: {available_integrations}
    (map of service_name → module path; import from these instead of
    installing SDKs yourself. Empty {} means no integrations are installed.)
+
+   Build decisions: {build_decisions}
+   (decisions already made for this build — see .claude-build/map.yaml
+   decisions list, filtered to entries relevant to this feature. Treat them
+   as settled; do not re-decide. If you hit an unsettled decision you cannot
+   make, report blocked-on-decision per your Decision Escalation section.)
 
    Build this feature in your worktree. Run tests. Commit.
    Report back with the standard FEATURE BUILDER REPORT format.
@@ -442,6 +452,84 @@ Same as before, always sequential:
 
 ---
 
+## Build Map
+
+Some builds are larger than one session can hold. The **Build Map** is the machine-readable journal that makes a build resumable: a fresh session (or `/resume`) reads it and continues from the first pending unit instead of re-deriving state from prose. It lives at `{output_dir}/.claude-build/map.yaml`. `BUILD_REPORT.md` stays the human-facing story; the map is the source of truth for *where the build is*.
+
+### Shape
+
+```yaml
+# .claude-build/map.yaml — written by the orchestrator; do not hand-edit mid-build
+blueprint: /abs/path/to/blueprint.yaml
+blueprint_sha256: "{sha256 of the blueprint file at build start}"
+knowledge_repo: /abs/path/to/claude-app-orchestrator
+started: 2026-08-10T17:04:00Z
+updated: 2026-08-10T17:31:12Z
+status: in-progress        # in-progress | blocked | done | failed
+plan:
+  mode: parallel           # from Phase 0
+  waves:
+    - [auth]
+    - [todo-crud-api, todo-list-ui]
+    - [tests]
+units:                     # every unit of work, in canonical phase order
+  scaffold:            {status: done, commit: a1b2c3d}
+  integration:resend:  {status: done, commit: d4e5f6a}
+  shared:design-system: {status: pending}
+  feature:auth:        {status: done, wave: 0, specialist: react-feature-builder, commit: b7c8d9e}
+  feature:todo-crud-api: {status: in-progress, wave: 1}
+  feature:todo-list-ui:  {status: pending, wave: 1}
+  wave-merge:1:        {status: pending}
+  job:sla-check:       {status: pending}
+  review:              {status: pending}
+decisions:                 # every decision made after the blueprint was frozen
+  - id: BD1
+    unit: feature:todo-crud-api
+    question: "Delete = soft delete (deletedAt) or hard delete?"
+    options: ["soft delete", "hard delete"]
+    resolved_by: user      # user | orchestrator | blueprint
+    decision: "Hard delete — no audit requirement in the destination."
+    date: 2026-08-10T17:20:00Z
+```
+
+Unit statuses: `pending | in-progress | done | failed | blocked-on-decision | skipped`. Unit keys are `{kind}:{name}` with kinds `scaffold`, `integration`, `shared`, `rbac`, `feature`, `wave-merge`, `job`, `webhook`, `review`.
+
+### Write cadence
+
+Update the map (and its `updated` timestamp) at every one of these boundaries — never batch several into one write:
+
+1. End of Phase 0 (initialize: plan + all units `pending`)
+2. A unit starts (`in-progress`) and finishes (`done` + commit SHA, or `failed`)
+3. A wave merge completes
+4. A decision is recorded (see Decision Escalation below)
+5. Build completes (`status: done`) or aborts (`status: failed`, with a `note:` naming the blocker)
+
+The write is cheap — a small YAML file — and it is the entire difference between "resume in 30 seconds" and "archaeology through git log."
+
+### Decision Escalation
+
+Workers must not guess on decisions the blueprint doesn't answer (see `agents/feature-builder.md`, Decision Escalation). When a worker reports `status: blocked-on-decision` with a `DECISION NEEDED` block:
+
+1. **Try to resolve it yourself** — from the blueprint, the destination described in its `description`, or an existing `decisions:` entry (check first: the same question may already be settled; never re-decide, reuse).
+2. If the blueprint genuinely doesn't answer it, **ask the user** with the worker's options and recommendation.
+3. **Record the decision** in the map's `decisions:` list with `resolved_by`, then re-dispatch the worker with the decision included in its `build_decisions` input.
+4. Mirror the decision as one line in `BUILD_REPORT.md` under a `## Decisions` section.
+
+A decision recorded in the map is permanent for the build: later workers receive all decisions relevant to their unit, and a resumed session inherits them all. If a decision must be reversed, the user says so explicitly, and you record a *new* superseding entry — never edit the old one.
+
+### Resume protocol
+
+On invocation, if `{output_dir}/.claude-build/map.yaml` exists:
+
+1. **Verify the blueprint hash.** If `blueprint_sha256` no longer matches the blueprint file, STOP and tell the user the blueprint changed mid-build — they must either restore it or accept a fresh build. Never continue a build against a mutated blueprint.
+2. **Cross-check against git**: every unit marked `done` must have its commit reachable in `{output_dir}` history (`git cat-file -e {sha}`). A `done` unit with a missing commit is corrupt state — mark it `pending` again and tell the user.
+3. **Reconcile `in-progress` units**: a unit stuck `in-progress` from a dead session is `pending` again (its worktree, if any, is abandoned — check `git worktree list` and prune).
+4. Reprint the execution plan with ✓/⏳/○ per unit, list decisions so far, then continue from the first pending unit in canonical phase order.
+
+If the map is missing but `BUILD_REPORT.md` exists (a pre-Build-Map build), fall back to the legacy crash recovery: parse the report, cross-check `git log`, and *create* the map before continuing so the build is journaled from here on.
+
+---
+
 ## Build Report
 
 The orchestrator maintains a `BUILD_REPORT.md` in the **output project root** (next to `package.json`), updated incrementally as the build progresses. Writing it incrementally — rather than at the end — means partial-build state survives a crash; users who interrupt or hit an error mid-build still get a useful trace of what got done.
@@ -466,7 +554,7 @@ The orchestrator maintains a `BUILD_REPORT.md` in the **output project root** (n
 
 ### Crash recovery
 
-If the orchestrator restarts mid-build (user interruption, network failure, etc.), the next run reads the existing `BUILD_REPORT.md` first to determine which features have already been committed (cross-check against `git log`). It resumes from the next pending feature in the blueprint rather than re-running completed work.
+If the orchestrator restarts mid-build (user interruption, network failure, etc.), follow the **Resume protocol** in the Build Map section: `.claude-build/map.yaml` is the source of truth for what is done, in-progress, and pending — `BUILD_REPORT.md` is only the fallback for builds that predate the Build Map.
 
 ---
 
@@ -525,6 +613,7 @@ If a feature references a skill not in this table, search `skills/` with Glob fo
 - **Safety check failed**: Fall back to sequential. Tell the user which check failed.
 - **`npm install` fails**: Read the error, check for version conflicts, adjust and retry.
 - **Schema generation fails**: Re-read the blueprint `models` and the database skill; check for typos.
+- **Worker agent reports `blocked-on-decision`**: Not an error. Run the Decision Escalation steps in the Build Map section: resolve or ask the user, record the decision in `.claude-build/map.yaml`, re-dispatch the worker with the decision in its `build_decisions` input. If other workers in the wave are unaffected, let them finish first.
 - **Worker agent reports `failure`**: Inspect its report. Common causes:
   - Skill file not found → fix the skill mapping
   - Tests failed → run the Fullstack Debugger workflow
