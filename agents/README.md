@@ -1,5 +1,9 @@
 # Agents
 
+## Planning
+
+- [Wayfinder](wayfinder.md) — Turns a foggy app idea into a resolved blueprint by maintaining a map of decision tickets; plans, never builds
+
 ## Orchestration
 
 - [Orchestrator](orchestrator.md) — Master agent that builds a complete app from a blueprint, with optional parallel execution
