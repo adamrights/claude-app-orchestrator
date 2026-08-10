@@ -16,7 +16,7 @@ The default stack is **Next.js + Prisma + Tailwind**, but additional templates a
 
 ```bash
 git clone <this-repo> && cd claude-app-orchestrator
-./install.sh                 # symlinks 4 slash commands into ~/.claude/commands/
+./install.sh                 # symlinks the slash commands into ~/.claude/commands/
 ```
 
 Then in Claude Code, from any directory:
