@@ -5,6 +5,9 @@ Blueprints are YAML files that declaratively describe an app to be built. The or
 ## Files
 
 - [schema.md](schema.md) — Field reference for the blueprint format
+- `maps/` — Wayfinder decision maps (the planning phase *before* a blueprint exists — see [guides/wayfinding.md](../guides/wayfinding.md))
+  - [TEMPLATE.map.md](maps/TEMPLATE.map.md) — Starting layout for a new map
+  - [examples/helpdesk.map.md](maps/examples/helpdesk.map.md) — A fully resolved map for the helpdesk reference app
 - `examples/` — Example blueprints, one per template variant
   - [todo-app.yaml](examples/todo-app.yaml) — Fullstack todo app (default Next.js template)
   - [dashboard-spa.yaml](examples/dashboard-spa.yaml) — Client-side dashboard SPA (Vite template)

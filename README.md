@@ -32,10 +32,13 @@ That builds the [helpdesk reference app](examples/built/helpdesk/) — a B2B sup
 3. `/validate ~/my-app.yaml` (catches typos before the build runs)
 4. `/orchestrate ~/my-app.yaml ~/my-app`
 
+Don't know yet what the app should be, exactly? Start further upstream: `/wayfind "your idea"` runs a planning loop that surfaces the unmade decisions as tickets on a map, resolves them with you one at a time, and emits the blueprint when the route is clear — see [guides/wayfinding.md](guides/wayfinding.md).
+
 Slash commands at a glance:
 
 | Command | What it does |
 |---------|--------------|
+| `/wayfind "<idea>"` | Plan a foggy idea into a blueprint via a decision map (resume with `/wayfind <map.md>`) |
 | `/orchestrate <blueprint> [out]` | Validate, scaffold, and build an app |
 | `/validate <blueprint>` | Pre-flight a blueprint without building |
 | `/audit` | Run the React Performance Auditor in the cwd app |
@@ -129,6 +132,7 @@ Full schema: [`blueprints/schema.md`](blueprints/schema.md)
 
 ## Documentation
 
+- [`guides/wayfinding.md`](guides/wayfinding.md) — Planning a foggy idea into a blueprint (`/wayfind`)
 - [`guides/orchestrator-usage.md`](guides/orchestrator-usage.md) — End-to-end workflow
 - [`guides/blueprint-authoring.md`](guides/blueprint-authoring.md) — Writing good blueprints
 - [`guides/parallel-execution.md`](guides/parallel-execution.md) — How parallel mode works

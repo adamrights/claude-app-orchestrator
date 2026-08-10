@@ -7,11 +7,13 @@ The repo gives Claude agents two things: (1) coding **skills** to follow, and (2
 ## Repository Structure
 
 - `skills/` — Coding guidelines organized by domain
+  - `planning/` — Decision mapping (wayfinder maps, decision tickets)
   - `frontend/` — React, hooks, styling, state management, routing
   - `backend/` — API design, databases, authentication
   - `devops/` — Docker, CI/CD
   - `testing/` — Unit, integration, e2e testing strategies
 - `agents/` — Agent definitions
+  - `wayfinder.md` — Planning agent that turns a foggy idea into a blueprint via a decision map (plans, never builds)
   - `orchestrator.md` — Master agent that builds apps from blueprints (with optional parallel execution)
   - `project-initializer.md` — Scaffolding specialist
   - `feature-builder.md` — Per-feature worker that runs in an isolated worktree (used by parallel waves)
@@ -22,6 +24,7 @@ The repo gives Claude agents two things: (1) coding **skills** to follow, and (2
   - `rsc-architect.md`, `design-system-builder.md`, `react-performance-auditor.md` — Advanced React specialists
   - `integration-specialist.md`, `background-jobs-specialist.md`, `rbac-specialist.md` — Domain specialists (v2)
 - `blueprints/` — Declarative app specs (YAML) and examples
+  - `maps/` — Wayfinder decision maps (template + examples) for the planning phase before a blueprint exists
 - `templates/` — Starter project scaffolds referenced by blueprints
   - `nextjs-prisma-tailwind/` — Default fullstack template
   - `vite-react-tailwind/` — Client-side SPA

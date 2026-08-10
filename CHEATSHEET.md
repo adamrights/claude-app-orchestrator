@@ -13,6 +13,7 @@ One-page reference for the common operations. Slash commands assume you've run `
 
 | Action | Command |
 |--------|---------|
+| Plan a foggy idea into a blueprint | `/wayfind "<app idea>"` (resume: `/wayfind <map.md>`) |
 | Build an app | `/orchestrate <blueprint.yaml> [out-dir]` |
 | Validate a blueprint | `/validate <blueprint.yaml>` |
 | Audit perf of an app | `/audit` (run in app dir) |
