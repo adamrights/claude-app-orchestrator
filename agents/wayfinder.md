@@ -105,7 +105,7 @@ Never resolve two tickets in one breath, and never let a resolution silently rev
 
 When the frontier is empty and Not yet specified holds nothing blocking:
 
-1. Draft the blueprint YAML from Decisions so far — every `stack`, `models`, `pages`, `features` (and v2 sections) entry must trace back to a decision line. If you find yourself inventing something mid-draft, that is an unresolved decision: stop, ticket it, return to Phase C.
+1. Draft the blueprint YAML from Decisions so far — every `stack`, `models`, `pages`, `features` (and v2 sections) entry must trace back to a decision line. If you find yourself inventing something mid-draft, that is an unresolved decision: stop, ticket it, return to Phase C. Put a linkage comment on line 2 of the blueprint (below any `yaml-language-server` line): `# wayfinder-map: {path to the map, relative to the blueprint}` — the orchestrator uses it to import your decisions into the build's decision log.
 2. Merge in any applicable snippets from `blueprints/snippets/` rather than hand-rolling their sections.
 3. Validate: `node {knowledge_repo}/scripts/validate-blueprint.mjs {blueprint_path}`. Fix and re-validate until clean.
 4. Update the map header: `status: ready`, `blueprint: {path}`, and add a final Decisions line noting the blueprint was emitted.
