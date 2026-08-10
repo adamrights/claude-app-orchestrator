@@ -1,0 +1,246 @@
+# skills/manifest.yaml — single source of truth for the skill map.
+#
+# Every skill file under skills/ has exactly one entry here. The orchestrator's
+# Skill Mapping table and skills/MAP.md are GENERATED from this file:
+#
+#   node scripts/build-skill-map.mjs            # regenerate
+#   node scripts/build-skill-map.mjs --check    # fail if outputs drifted (run by `make refs`)
+#
+# Fields:
+#   name        — short name used in blueprint `skills:` arrays (unique)
+#   path        — file path relative to the repo root
+#   layer       — frontend | backend | shared | devops | testing | planning
+#                 (frontend/backend drive splittable-feature detection; shared/devops/
+#                  testing/planning never count toward a layer split)
+#   description — one line, shown in skills/MAP.md
+#   triggers    — when an agent should load this skill
+
+skills:
+  # --- planning ---
+  - name: decision-mapping
+    path: skills/planning/decision-mapping.md
+    layer: planning
+    description: Wayfinder maps — decision tickets, resolutions, map hygiene, anti-patterns
+    triggers: wayfinding sessions; any plan that must survive session boundaries
+
+  # --- frontend: foundations ---
+  - name: react-component
+    path: skills/frontend/react-component.md
+    layer: frontend
+    description: Functional components, forwardRef, controlled/uncontrolled, memo discipline
+    triggers: building any React component, page, or view
+
+  - name: react-hooks
+    path: skills/frontend/react-hooks.md
+    layer: frontend
+    description: useState/useEffect/useId/useTransition/useDeferredValue/useSyncExternalStore and custom hooks
+    triggers: writing or extracting hooks; any effect/subscription logic
+
+  - name: state-management
+    path: skills/frontend/state-management.md
+    layer: frontend
+    description: Choosing between local state, Context, Zustand, Jotai, Redux Toolkit
+    triggers: state shared across components or persisted across routes
+
+  - name: styling
+    path: skills/frontend/styling.md
+    layer: frontend
+    description: CSS Modules, Tailwind, styled-components
+    triggers: any styling work beyond copying existing classes
+
+  - name: routing
+    path: skills/frontend/routing.md
+    layer: frontend
+    description: Next.js App Router, React Router, TanStack Router
+    triggers: adding routes, layouts, redirects, or route guards
+
+  - name: error-handling
+    path: skills/frontend/error-handling.md
+    layer: frontend
+    description: Error boundaries, try/catch placement, error states
+    triggers: any user-facing failure path or async error surface
+
+  - name: forms
+    path: skills/frontend/forms.md
+    layer: frontend
+    description: react-hook-form + Zod, validation, multi-step forms
+    triggers: any form beyond a single uncontrolled input
+
+  - name: accessibility
+    path: skills/frontend/accessibility.md
+    layer: frontend
+    description: Semantic HTML, ARIA, keyboard navigation, screen readers
+    triggers: interactive UI work; always alongside design-system work
+
+  # --- frontend: advanced react ---
+  - name: server-components
+    path: skills/frontend/server-components.md
+    layer: frontend
+    description: Next.js RSC, 'use client' boundaries, Server Actions, streaming Suspense
+    triggers: App Router pages, server/client boundary decisions, Server Actions
+
+  - name: concurrent-react
+    path: skills/frontend/concurrent-react.md
+    layer: frontend
+    description: useTransition, useDeferredValue, Suspense as a primitive, useId
+    triggers: laggy interactions, expensive re-renders, suspense-driven loading
+
+  - name: composition-patterns
+    path: skills/frontend/composition-patterns.md
+    layer: frontend
+    description: Compound components, polymorphic as, headless UI, slot/asChild
+    triggers: reusable component APIs; anything consumed by other features
+
+  - name: typescript-patterns
+    path: skills/frontend/typescript-patterns.md
+    layer: shared
+    description: Generic components, ComponentPropsWithoutRef, polymorphic refs, discriminated unions
+    triggers: typing component APIs, generics, or complex unions anywhere
+
+  - name: design-system
+    path: skills/frontend/design-system.md
+    layer: frontend
+    description: Radix + Tailwind + CVA + shadcn-style primitives, design tokens, theming
+    triggers: building or extending UI primitives; first UI feature of a multi-page app
+
+  - name: animations
+    path: skills/frontend/animations.md
+    layer: frontend
+    description: framer-motion (layout, gestures), reduced-motion, CSS vs JS animation
+    triggers: any motion work — transitions, gestures, layout animation
+
+  - name: state-machines
+    path: skills/frontend/state-machines.md
+    layer: shared
+    description: useReducer discriminated unions, XState v5 for complex flows
+    triggers: multi-step flows with distinct states (wizards, uploads, checkout)
+
+  # --- frontend: data & performance ---
+  - name: optimistic-updates
+    path: skills/frontend/optimistic-updates.md
+    layer: frontend
+    description: Instant UI updates with rollback on error
+    triggers: mutations the user should perceive as instant (toggles, likes, reorder)
+
+  - name: data-fetching
+    path: skills/frontend/data-fetching.md
+    layer: frontend
+    description: TanStack Query patterns, mutations, invalidation
+    triggers: any client-side server-state fetching or mutation
+
+  - name: data-tables
+    path: skills/frontend/data-tables.md
+    layer: frontend
+    description: TanStack Table + Query, URL state, server pagination
+    triggers: sortable/filterable/paginated list UIs
+
+  - name: pagination
+    path: skills/frontend/pagination.md
+    layer: frontend
+    description: Cursor vs offset, infinite scroll, URL state
+    triggers: any list too long for one response
+
+  - name: performance
+    path: skills/frontend/performance.md
+    layer: frontend
+    description: Code splitting, virtualization, memoization, bundle size, React Compiler
+    triggers: perf work, large lists, heavy bundles, slow renders
+
+  - name: web-vitals
+    path: skills/frontend/web-vitals.md
+    layer: frontend
+    description: LCP/INP/CLS, Profiler API, RUM, performance budgets
+    triggers: measuring or fixing Core Web Vitals; perf audits
+
+  # --- backend ---
+  - name: api-design
+    path: skills/backend/api-design.md
+    layer: backend
+    description: REST conventions, Next.js and Express patterns
+    triggers: any new API route or endpoint surface
+
+  - name: database
+    path: skills/backend/database.md
+    layer: backend
+    description: Prisma, Drizzle, schema design
+    triggers: schema changes, queries, transactions, N+1 concerns
+
+  - name: authentication
+    path: skills/backend/authentication.md
+    layer: shared
+    description: Auth libraries, session management, security
+    triggers: login/logout, sessions, protected routes, OAuth wiring
+
+  - name: trpc
+    path: skills/backend/trpc.md
+    layer: backend
+    description: Type-safe RPC layer for fullstack TypeScript apps
+    triggers: tRPC routers, procedures, or client integration
+
+  - name: graphql
+    path: skills/backend/graphql.md
+    layer: backend
+    description: GraphQL conventions, schema design, client patterns
+    triggers: GraphQL schema, resolvers, or client queries
+
+  - name: validation
+    path: skills/backend/validation.md
+    layer: shared
+    description: Zod schemas, input validation, sanitization
+    triggers: any boundary where external data enters the system
+
+  - name: migrations
+    path: skills/backend/migrations.md
+    layer: backend
+    description: Prisma and Drizzle migration workflows
+    triggers: schema changes on a database with existing data
+
+  - name: rate-limiting
+    path: skills/backend/rate-limiting.md
+    layer: backend
+    description: API protection, throttling, 429 responses
+    triggers: public endpoints, auth endpoints, expensive operations
+
+  - name: search
+    path: skills/backend/search.md
+    layer: backend
+    description: Postgres FTS, Meilisearch, typo tolerance, faceting
+    triggers: any full-text or faceted search feature
+
+  - name: caching
+    path: skills/backend/caching.md
+    layer: backend
+    description: Redis, HTTP headers, CDN, invalidation strategies
+    triggers: repeated expensive reads; response caching decisions
+
+  # --- devops ---
+  - name: docker
+    path: skills/devops/docker.md
+    layer: devops
+    description: Multi-stage builds, Docker Compose for dev
+    triggers: containerizing the app or adding compose services
+
+  - name: ci-cd
+    path: skills/devops/ci-cd.md
+    layer: devops
+    description: GitHub Actions for Node.js/Next.js projects
+    triggers: pipeline setup, build/test/deploy workflows
+
+  - name: secrets
+    path: skills/devops/secrets.md
+    layer: devops
+    description: Env var handling, secret rotation, platform patterns
+    triggers: any new secret, env var, or credential surface
+
+  # --- testing ---
+  - name: react-testing
+    path: skills/testing/react-testing.md
+    layer: testing
+    description: Vitest, React Testing Library, MSW
+    triggers: component/hook/integration tests
+
+  - name: e2e-testing
+    path: skills/testing/e2e-testing.md
+    layer: testing
+    description: Playwright setup and patterns
+    triggers: end-to-end user-flow tests

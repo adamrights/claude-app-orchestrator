@@ -36,15 +36,28 @@ Existing skills follow a consistent format. Copy one (e.g., `skills/frontend/rea
 
 The orchestrator treats "Guidelines" and "Checklist" sections as requirements when building features.
 
-## 3. Update the orchestrator's skill mapping
+## 3. Add a manifest entry and regenerate
 
-Open `agents/orchestrator.md` and add a row to the "Skill Mapping" table:
+The skill map has a single source of truth: `skills/manifest.yaml`. Add one entry:
 
+```yaml
+  - name: your-skill-name
+    path: skills/{category}/your-skill-name.md
+    layer: frontend        # frontend | backend | shared | devops | testing | planning
+    description: One line for the browsable index
+    triggers: when an agent should load this skill
 ```
-| `your-skill-name` | `skills/{category}/your-skill-name.md` |
+
+The `name` is what users type in the `skills:` array of their blueprints — lowercase, hyphenated, concise. The `layer` matters: only `frontend` and `backend` count toward the orchestrator's splittable-feature detection.
+
+Then regenerate the derived outputs (the orchestrator's Skill Mapping table and `skills/MAP.md`):
+
+```bash
+make skillmap        # or: node scripts/build-skill-map.mjs
+make refs            # verifies everything is in sync
 ```
 
-The short name (left column) is what users type in the `skills:` array of their blueprints. Keep it lowercase, hyphenated, and concise.
+Never edit the generated table in `agents/orchestrator.md` by hand — `make refs` fails on drift.
 
 ## 4. Update the directory README
 

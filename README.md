@@ -142,7 +142,7 @@ Full schema: [`blueprints/schema.md`](blueprints/schema.md)
 
 ## Extending the system
 
-- **Add a skill**: Drop a markdown file under `skills/{category}/`, add it to the orchestrator's skill mapping table, and reference it from blueprint features.
+- **Add a skill**: Drop a markdown file under `skills/{category}/`, add one entry to `skills/manifest.yaml`, and run `make skillmap` — the orchestrator's mapping table and the browsable [`skills/MAP.md`](skills/MAP.md) index are generated from the manifest.
 - **Add a template**: Create `templates/{name}/scaffold.yaml` and a `files/` tree with starter files including a project-level `CLAUDE.md`.
 - **Add an agent**: Create `agents/{name}.md` with YAML frontmatter (`name`, `description`, `tools`) and a workflow section.
 

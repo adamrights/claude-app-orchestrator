@@ -41,7 +41,7 @@ The orchestrator picks a template from the blueprint's `stack` declaration, scaf
 
 ## Conventions
 
-- Skills are Markdown files with guidelines and code examples
+- Skills are Markdown files with guidelines and code examples; `skills/manifest.yaml` is the single source of truth for the skill map — after adding a skill, add a manifest entry and run `make skillmap` (never hand-edit the generated table in `agents/orchestrator.md` or `skills/MAP.md`)
 - Agents are Markdown files with YAML frontmatter (name, description, tools) and a workflow section
 - Blueprints are YAML files describing apps declaratively
 - Templates are minimal starter file trees under `templates/{name}/files/`
