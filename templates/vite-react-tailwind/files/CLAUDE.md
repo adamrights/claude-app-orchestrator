@@ -12,7 +12,9 @@
 - **Git hooks**: Husky + lint-staged
 
 This is a **client-side SPA** — there is no backend in this project. API calls
-go to `env.VITE_API_URL`.
+go to `env.VITE_API_URL` (optional: leave it unset for apps with no API at all,
+e.g. localStorage-backed tools; make it required in `src/env.ts` if your app
+cannot function without one).
 
 ## Commands
 - `npm run dev` — start dev server (http://localhost:5173)

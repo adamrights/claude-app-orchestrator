@@ -5,6 +5,9 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { router } from './router';
 import './index.css';
+// Importing env here is what makes "validation runs on app boot" true —
+// a missing/malformed var throws before the first render, not on first use.
+import './env';
 
 const queryClient = new QueryClient();
 

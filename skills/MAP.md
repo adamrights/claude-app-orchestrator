@@ -2,7 +2,7 @@
 
 <!-- Generated from skills/manifest.yaml by scripts/build-skill-map.mjs. Do not edit by hand: edit the manifest, then run `node scripts/build-skill-map.mjs`. -->
 
-37 skills. Short names are what blueprint `skills:` arrays and agents use; the Layer column drives the orchestrator's splittable-feature detection (only `frontend` and `backend` count toward a layer split).
+38 skills. Short names are what blueprint `skills:` arrays and agents use; the Layer column drives the orchestrator's splittable-feature detection (only `frontend` and `backend` count toward a layer split).
 
 ## backend
 
@@ -46,6 +46,7 @@
 | [`design-system`](frontend/design-system.md) | frontend | Radix + Tailwind + CVA + shadcn-style primitives, design tokens, theming | building or extending UI primitives; first UI feature of a multi-page app |
 | [`animations`](frontend/animations.md) | frontend | framer-motion (layout, gestures), reduced-motion, CSS vs JS animation | any motion work — transitions, gestures, layout animation |
 | [`state-machines`](frontend/state-machines.md) | shared | useReducer discriminated unions, XState v5 for complex flows | multi-step flows with distinct states (wizards, uploads, checkout) |
+| [`client-persistence`](frontend/client-persistence.md) | frontend | localStorage/IndexedDB — versioned keys, migrations, validated loads, quota-safe writes | any browser-stored user data; serverless SPAs; offline/draft caching |
 | [`optimistic-updates`](frontend/optimistic-updates.md) | frontend | Instant UI updates with rollback on error | mutations the user should perceive as instant (toggles, likes, reorder) |
 | [`data-fetching`](frontend/data-fetching.md) | frontend | TanStack Query patterns, mutations, invalidation | any client-side server-state fetching or mutation |
 | [`data-tables`](frontend/data-tables.md) | frontend | TanStack Table + Query, URL state, server pagination | sortable/filterable/paginated list UIs |
