@@ -17,6 +17,7 @@ One-page reference for the common operations. Slash commands assume you've run `
 | Validate a blueprint | `/validate <blueprint.yaml>` |
 | Audit perf of an app | `/audit` (run in app dir) |
 | Add a feature to an app | `/extend "<description>"` (run in app dir) |
+| Resume an interrupted build | `/resume [out-dir]` |
 
 ## Daily commands (manual / shell)
 

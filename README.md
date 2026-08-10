@@ -40,6 +40,7 @@ Slash commands at a glance:
 | `/validate <blueprint>` | Pre-flight a blueprint without building |
 | `/audit` | Run the React Performance Auditor in the cwd app |
 | `/extend "<description>"` | Add a new feature to an already-built app |
+| `/resume [out]` | Continue an interrupted build from its Build Map journal |
 
 Without slash commands, see [`CHEATSHEET.md`](CHEATSHEET.md) for the manual incantations.
 
@@ -47,7 +48,7 @@ Without slash commands, see [`CHEATSHEET.md`](CHEATSHEET.md) for the manual inca
 - Add `# yaml-language-server: $schema=../schema.json` to line 1 of your blueprint for VS Code autocomplete + hover docs (any LSP-aware editor with the YAML extension picks it up).
 - For common SaaS capabilities (auth, billing, multi-tenant, file uploads, email, observability), paste in the matching snippet from [`blueprints/snippets/`](blueprints/snippets/) — each is a documented set of fragments you merge into the right sections.
 
-The orchestrator picks the right template based on the blueprint's `stack`, scaffolds the project, then dispatches specialist agents (with the relevant skills loaded) to build each feature. Each feature becomes its own git commit so you can review the work incrementally. A `BUILD_REPORT.md` lands in the output directory describing what was built and what to do next.
+The orchestrator picks the right template based on the blueprint's `stack`, scaffolds the project, then dispatches specialist agents (with the relevant skills loaded) to build each feature. Each feature becomes its own git commit so you can review the work incrementally. A `BUILD_REPORT.md` lands in the output directory describing what was built and what to do next, and a machine-readable Build Map (`.claude-build/map.yaml`) journals every unit and decision so an interrupted build continues with `/resume` — see [guides/resuming-builds.md](guides/resuming-builds.md).
 
 ## How it works
 
@@ -131,6 +132,7 @@ Full schema: [`blueprints/schema.md`](blueprints/schema.md)
 - [`guides/orchestrator-usage.md`](guides/orchestrator-usage.md) — End-to-end workflow
 - [`guides/blueprint-authoring.md`](guides/blueprint-authoring.md) — Writing good blueprints
 - [`guides/parallel-execution.md`](guides/parallel-execution.md) — How parallel mode works
+- [`guides/resuming-builds.md`](guides/resuming-builds.md) — Multi-session builds: the Build Map and `/resume`
 - [`guides/adding-templates.md`](guides/adding-templates.md) — Adding a new starter template
 - [`guides/adding-skills.md`](guides/adding-skills.md) — Extending the knowledge base
 
