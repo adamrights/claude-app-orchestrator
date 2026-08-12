@@ -53,4 +53,6 @@ Rule of thumb: wayfind when you'd otherwise start the build to *find out* what y
 
 **What if a decision turns out wrong mid-build?** The build phase treats the blueprint as source of truth and stops when it's wrong. Reopen the relevant ticket on the map, re-resolve, update the blueprint, and re-run. Never edit the blueprint mid-build.
 
+**What about features added after the build?** `/extend` reads the app's decision trail. Extensions the map already bounds proceed directly (and leave a one-line decision gist behind); genuinely foggy extensions reopen the map — new tickets on the frontier, resolved the normal way, then built with those decisions inherited. A `built` map is the app's decision memory, not a dead artifact.
+
 **Do small apps need a map?** No. See "When to skip wayfinding."
