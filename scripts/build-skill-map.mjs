@@ -7,6 +7,7 @@
 //   1. The Skill Mapping table in agents/orchestrator.md, between
 //      <!-- BEGIN GENERATED: skill-map --> and <!-- END GENERATED: skill-map -->
 //   2. skills/MAP.md — browsable index grouped by category directory
+//   3. skills/{category}/README.md — per-directory index (one per category)
 //
 // Usage:
 //   node scripts/build-skill-map.mjs            # write outputs
@@ -146,6 +147,45 @@ function mapMd(skills) {
   ].join('\n');
 }
 
+const DIR_TITLES = {
+  backend: 'Backend Skills',
+  devops: 'DevOps Skills',
+  frontend: 'Frontend Skills',
+  planning: 'Planning Skills',
+  testing: 'Testing Skills',
+};
+
+// One README per skills/ subdirectory, generated from the manifest.
+function dirReadmes(skills) {
+  const byDir = new Map();
+  for (const s of skills) {
+    const dir = s.path.split('/')[1] ?? 'other';
+    if (!byDir.has(dir)) byDir.set(dir, []);
+    byDir.get(dir).push(s);
+  }
+  const out = new Map(); // abs path -> content
+  for (const [dir, list] of byDir) {
+    const title = DIR_TITLES[dir] ?? `${dir[0].toUpperCase()}${dir.slice(1)} Skills`;
+    const lines = [
+      `# ${title}`,
+      '',
+      '<!-- Generated from skills/manifest.yaml by scripts/build-skill-map.mjs. Do not edit by hand: edit the manifest, then run `make skillmap`. -->',
+      '',
+      '| Skill | What it covers | Load when |',
+      '|-------|----------------|-----------|',
+      ...list.map((s) => {
+        const base = s.path.split('/').pop();
+        return `| [\`${s.name}\`](${base}) | ${s.description} | ${s.triggers} |`;
+      }),
+      '',
+      'Full cross-domain index: [../MAP.md](../MAP.md)',
+      '',
+    ];
+    out.set(resolve(repoRoot, 'skills', dir, 'README.md'), lines.join('\n'));
+  }
+  return out;
+}
+
 function spliceOrchestrator(text, table) {
   const b = text.indexOf(BEGIN);
   const e = text.indexOf(END);
@@ -174,18 +214,24 @@ if (errors.length) {
   process.exit(1);
 }
 
+const nextReadmes = dirReadmes(skills);
+
 if (CHECK) {
   const drift = [];
   if (nextOrchestrator !== orchestratorText) drift.push('agents/orchestrator.md (Skill Mapping table)');
   if (!existsSync(mapPath) || readFileSync(mapPath, 'utf8') !== nextMap) drift.push('skills/MAP.md');
+  for (const [path, content] of nextReadmes) {
+    if (!existsSync(path) || readFileSync(path, 'utf8') !== content) drift.push(relative(repoRoot, path));
+  }
   if (drift.length) {
     console.error(`error: generated skill map is stale: ${drift.join(', ')}`);
     console.error('       run: node scripts/build-skill-map.mjs');
     process.exit(1);
   }
-  console.log(`skill map in sync: ${skills.length} skills ✓`);
+  console.log(`skill map in sync: ${skills.length} skills, ${nextReadmes.size} directory READMEs ✓`);
 } else {
   writeFileSync(orchestratorPath, nextOrchestrator);
   writeFileSync(mapPath, nextMap);
-  console.log(`wrote agents/orchestrator.md table + skills/MAP.md (${skills.length} skills)`);
+  for (const [path, content] of nextReadmes) writeFileSync(path, content);
+  console.log(`wrote agents/orchestrator.md table + skills/MAP.md + ${nextReadmes.size} directory READMEs (${skills.length} skills)`);
 }

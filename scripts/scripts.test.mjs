@@ -146,6 +146,19 @@ test('skill map: drift in a generated output fails --check with the file named',
   }
 });
 
+test('skill map: hand-edited directory README fails --check', () => {
+  const readmePath = join(repoRoot, 'skills/frontend/README.md');
+  const backup = readFileSync(readmePath, 'utf8');
+  writeFileSync(readmePath, backup + '\nhand edit\n');
+  try {
+    const r = run('node', ['scripts/build-skill-map.mjs', '--check']);
+    assert.equal(r.status, 1);
+    assert.match(r.stderr, /skills\/frontend\/README\.md/);
+  } finally {
+    writeFileSync(readmePath, backup);
+  }
+});
+
 // ---------- check-references.mjs ----------
 
 test('check-references: passes on the committed repo state', () => {
