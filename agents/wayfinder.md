@@ -120,6 +120,16 @@ When the frontier is empty and Not yet specified holds nothing blocking:
 - **Prototype verdicts follow the same rule**: build the spike, record what it shows, and only conclude `(proxy)` if the Destination's own bullets pick the winner. Otherwise attach the evidence and leave the ticket open for a human look.
 - A map resolved with any `(proxy)` decisions is `ready` for building only if the user has accepted that mode (e.g., an explicitly autonomous pipeline); otherwise surface the proxy list and wait.
 
+## Reopening a built map
+
+A map with `status: built` is not dead — it is the app's decision memory. When an extension (`/extend`) raises questions the map never settled:
+
+1. Set `status: mapping` and add the new question(s) as tickets on the frontier — numbered continuing the existing sequence, so the audit trail stays linear.
+2. Run the normal Frontier Loop (grilling/research/prototype/task) for just those tickets. Existing decisions stay binding; if an extension genuinely invalidates one, reopen that ticket explicitly per the usual rule — never edit resolutions in place.
+3. When the frontier is empty again, gist the new decisions into Decisions so far, set `status: built`, and hand back to `/extend` — which passes the new decisions to the specialist as `build_decisions`.
+
+Bounded extensions (every question already answered by the map + blueprint) skip reopening entirely: `/extend` just appends a one-line decision gist recording what was added. Reserve reopening for genuine fog — the same bar as starting a map at all.
+
 ## GitHub mirroring (optional)
 
 If the working directory is a git repo with a GitHub remote AND the user opts in, mirror the map: one issue labeled `wayfinder:map` for the map, one issue labeled `wayfinder:ticket` per ticket, closed on resolution with the resolution as the closing comment. The **file remains canonical**; the issues are a viewport for humans watching the tracker. Never let the two drift — update both in the same step or decline to mirror.
