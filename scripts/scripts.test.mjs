@@ -230,6 +230,44 @@ features:
   assert.deepEqual(p.splittable, ['notes']);
 });
 
+test('planner: disjoint declared touches suppress model-overlap; intersecting touches force an edge', () => {
+  const bp = `name: t
+description: d
+stack:
+  type: fullstack
+models:
+  Ticket:
+    fields:
+      id: cuid
+features:
+  - name: ticket-api
+    description: ticket endpoints
+    skills: [api-design]
+    touches:
+      create: [src/app/api/tickets/route.ts]
+  - name: ticket-badges
+    description: ticket badge components
+    skills: [react-component]
+    touches:
+      create: [src/components/badges/]
+  - name: ticket-search
+    description: ticket search endpoint
+    skills: [search]
+    touches:
+      modify: [src/app/api/tickets/route.ts]
+  - name: tests
+    description: tests
+    skills: [react-testing]
+`;
+  const { plan: p } = plan(bp);
+  // badges vs api: both say "ticket" but declared footprints are disjoint → no edge, same wave
+  assert.deepEqual(p.dependencies['ticket-badges'], []);
+  assert.ok(p.waves[0].includes('ticket-api') && p.waves[0].includes('ticket-badges'));
+  assert.ok(p.warnings.some((w) => w.includes('suppressed')));
+  // search vs api: declared footprints intersect → hard edge
+  assert.ok(p.dependencies['ticket-search'].some((d) => d.on === 'ticket-api' && d.rule === 'touches-intersect'));
+});
+
 test('planner: rejects an invalid blueprint instead of planning it', () => {
   const { status, stderr } = plan('name: x\nfeatures: []\n');
   assert.equal(status, 1);
