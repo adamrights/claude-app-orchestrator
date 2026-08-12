@@ -132,6 +132,7 @@ Full schema: [`blueprints/schema.md`](blueprints/schema.md)
 
 ## Documentation
 
+- [`ARCHITECTURE.md`](ARCHITECTURE.md) — how the layers fit, sources of truth, design rules
 - [`guides/wayfinding.md`](guides/wayfinding.md) — Planning a foggy idea into a blueprint (`/wayfind`)
 - [`guides/orchestrator-usage.md`](guides/orchestrator-usage.md) — End-to-end workflow
 - [`guides/blueprint-authoring.md`](guides/blueprint-authoring.md) — Writing good blueprints
