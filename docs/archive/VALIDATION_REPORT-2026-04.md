@@ -1,4 +1,9 @@
-# Validation Report — Tabletop Walkthrough
+# Validation Report — Tabletop Walkthrough (ARCHIVED)
+
+> **Archived 2026-08-12.** This static analysis predates the wayfinder/Build Map
+> initiative (PRs #6–#22) and no longer reflects `agents/orchestrator.md`. For
+> current validation, see the executed dogfood trace on issue #12 and the CI
+> gates in `.github/workflows/ci.yml`.
 
 Generated: 2026-04-17
 Methodology: read `agents/orchestrator.md` end to end; trace each phase against
