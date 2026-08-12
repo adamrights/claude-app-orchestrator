@@ -126,8 +126,13 @@ for (let j = 0; j < features.length; j++) {
       if (pagePaths.some((p) => p !== '/' && text(A).includes(p) && text(B).includes(p))) {
         addDep(B.name, A.name, 'page-overlap');
       }
-    } else if (modelNames.some((m) => text(A).includes(m) && text(B).includes(m))) {
-      warnings.push(`model-overlap edge ${B.name} → ${A.name} suppressed: both declare disjoint touches`);
+    } else {
+      if (modelNames.some((m) => text(A).includes(m) && text(B).includes(m))) {
+        warnings.push(`model-overlap edge ${B.name} → ${A.name} suppressed: both declare disjoint touches`);
+      }
+      if (pagePaths.some((p) => p !== '/' && text(A).includes(p) && text(B).includes(p))) {
+        warnings.push(`page-overlap edge ${B.name} → ${A.name} suppressed: both declare disjoint touches`);
+      }
     }
     // rule 5: tests last (policy — never suppressed)
     if (isTest(B) && !isTest(A)) addDep(B.name, A.name, 'tests-last');

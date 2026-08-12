@@ -86,7 +86,7 @@ var the built app expects and where it's consumed.
 - **Real workflow logic.** Ticket status is a finite state machine
   (`open → in_progress → waiting_on_customer → resolved → closed`), so the
   `state-machines` skill earns its keep.
-- **Wide skill coverage.** ~17 of the catalog's 36 skills, including the
+- **Wide skill coverage.** ~17 of the catalog's 38 skills, including the
   ones that rarely appear in framework demos (`search`, `state-machines`,
   `composition-patterns`, `optimistic-updates`).
 - **Wide specialist coverage.** Dispatches 9 of the 10 build-time
