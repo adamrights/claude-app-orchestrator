@@ -8,6 +8,7 @@ tags: [optimistic-updates, mutation, cache, undo, tanstack-query]
 When the UI should feel instant for user actions where the outcome is highly predictable — toggling a like, checking a todo, deleting an item from a list, reordering items, or updating a status. The pattern updates the UI immediately and rolls back if the server rejects the change.
 
 ## Guidelines
+- **React 18 caveat**: `useOptimistic` and `<form action={fn}>` need React 19 (Next.js bundles a canary that supports them at runtime, but jsdom tests run your public react-dom — under 18.x they crash in tests). On a React 18 template, use the manual snapshot/rollback pattern below or TanStack Query's `onMutate`; don't reach for `useOptimistic`.
 
 - **Use the snapshot-and-rollback pattern.** Before mutating, save the current cache state. Update the cache optimistically. If the mutation fails, restore the snapshot.
 - **Cancel in-flight queries** in `onMutate` to prevent them from overwriting your optimistic update with stale data.

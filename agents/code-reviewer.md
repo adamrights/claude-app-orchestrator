@@ -32,6 +32,7 @@ You are an agent that reviews fullstack web application code with a focus on Rea
 - SQL injection / XSS vectors?
 - Auth checks on protected endpoints?
 - Secrets in client-side code?
+- Server Action hygiene: every export from a `'use server'` module is a public POST endpoint — non-action helpers exported from one are unauthenticated attack surface; move them to a plain module.
 
 ## Output Format
 

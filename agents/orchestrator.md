@@ -125,6 +125,8 @@ Always sequential. No changes from the original workflow.
    - Fullstack template → write `prisma/schema.prisma`
    - API template → write `src/db/schema.ts` (Drizzle)
    - SPA template → skip (no database)
+   - **If `stack.auth` is set on the fullstack template**, also generate the NextAuth adapter models (`Account`, `Session`, `VerificationToken`) and the adapter-required `User` fields (`emailVerified`, `image`, relations) — the template ships `@auth/prisma-adapter`, which breaks at runtime without them. Do this NOW, at schema time, not when the auth feature builds.
+   - **Create the initial migration** once the schema exists and the database is reachable: `npx prisma migrate dev --name init --create-only && npx prisma migrate deploy` (the two-step form because `migrate dev` prompts interactively and hangs in non-TTY automation). Drizzle: `npm run db:generate && npm run db:push`.
 7. **Generate config and flags modules** (v2 only):
    - If the blueprint has a `config:` section, generate a typed config module at `src/lib/config.ts` that reads from env vars with per-environment defaults. Add the config env vars to `.env.example`.
    - If the blueprint has a `flags:` section:
@@ -205,17 +207,19 @@ If Phase 0 chose sequential mode, process features one at a time as in the origi
 
 1. Load relevant skills from the Skill Mapping table
 2. Pick the specialist workflow using these rules (first match wins):
-   - Feature mentions "design system", "ui kit", "primitives", "shadcn", or is the *first* UI feature in a multi-page app → **Design System Builder** (`agents/design-system-builder.md`) — scaffolds Radix + Tailwind + CVA primitives that subsequent specialists compose from.
+   - Feature is named `auth` or mentions "login", "oauth", "session", "sign in" → **API Endpoint Builder, its authentication section** (`agents/api-endpoint-builder.md`) — the NextAuth file layout, role-in-JWT callback, and middleware wiring live there, even though auth spans both layers.
+   - Feature mentions "admin panel", "manage X", or is resource-management CRUD → **Admin Panel Builder** — checked BEFORE the data-table rule because admin descriptions often also say "admin list"/"searchable list"; a full admin surface owns its table, not the other way around.
+   - Feature mentions "design system", "ui kit", "primitives", "shadcn", or (only when the blueprint has no `shared:` design-system entry) is the *first* UI feature in a multi-page app → **Design System Builder** (`agents/design-system-builder.md`) — scaffolds Radix + Tailwind + CVA primitives that subsequent specialists compose from.
    - Feature mentions "server component", "RSC", "server action", "streaming", or is an App Router page on a Next.js fullstack project that should default to server rendering → **RSC Architect** (`agents/rsc-architect.md`)
    - Feature mentions "audit performance", "fix LCP/INP/CLS", "optimize bundle", or is a perf review pass → **React Performance Auditor** (`agents/react-performance-auditor.md`)
    - Feature mentions "data table", "admin list", "searchable list", or "paginated list of X" → **Data Table Builder** (`agents/data-table-builder.md`)
    - Feature mentions "dashboard", "overview page", "metrics", "KPI", or "analytics" → **Dashboard Builder** (`agents/dashboard-builder.md`)
-   - Feature mentions "admin panel", "manage X", "CRUD for X", or is clearly a resource management UI → **Admin Panel Builder** (`agents/admin-panel-builder.md`)
    - Feature is a UI component, page, or hook → **React Feature Builder** (`agents/react-feature-builder.md`)
    - Feature is an API route, database query, or server logic → **API Endpoint Builder** (`agents/api-endpoint-builder.md`)
    - Feature spans both layers → build API first then UI, OR use layer-level split if it's marked splittable
-3. Build, test, commit
-4. Move to the next feature
+3. Build, then gate: **`npm test` must be fully green before the feature commit** — husky covers lint/typecheck only, and a piped test command can mask a red suite; run it bare and read the summary line. Never commit on red.
+4. **Migrations in sequential mode**: after any feature that changed the schema, apply the Migration Specialist's conventions yourself before the feature commit — `npx prisma migrate dev --name wave-{n}-{change} --create-only`, review, `npx prisma migrate deploy`, committed separately as `chore(db): {name}`. (The Phase 2.5 Step 4 trigger reads parallel worker reports, which don't exist here.)
+5. Move to the next feature
 
 ### Parallel Mode
 
