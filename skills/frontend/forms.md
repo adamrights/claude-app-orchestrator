@@ -10,6 +10,7 @@ When building any user input form — login, signup, CRUD operations, settings p
 ## Guidelines
 
 - **Use React Hook Form + Zod** as the default form stack. RHF handles form state and performance; Zod handles schema validation.
+- **If RHF isn't installed and you can't add dependencies** (e.g., a parallel worker whose manifest excludes `package.json`): don't block on it. For a form of one or two fields, a controlled input with inline validation honors this skill's intent; for anything multi-field, report the missing dependency so it gets added centrally. Never hand-roll an RHF imitation.
 - **Prefer uncontrolled inputs via `register`** for performance. RHF avoids re-rendering the entire form on every keystroke by using uncontrolled inputs internally.
 - **Define form schemas with Zod** and connect them via `zodResolver`. The schema is the single source of truth for validation rules.
 - **Share schemas with the backend** when possible. Define once, validate on both sides.

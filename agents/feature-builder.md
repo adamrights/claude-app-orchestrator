@@ -26,6 +26,8 @@ The orchestrator will pass you:
 
 Before doing any other work — before reading skills, before reading the project, before touching any file — you must declare a **`touches:` manifest** listing the file globs you intend to create or modify. Return this to the orchestrator and wait for it to either accept or reject you.
 
+**Pre-approved mode:** when you run as a one-shot background worker, you cannot pause for approval — so the orchestrator includes a pre-approved manifest in your prompt instead. Treat it as your accepted declaration: log it in your first heartbeat, and treat its boundary as hard. If mid-build you need a file outside it, stop and report `status: failure` naming the file — never write it unilaterally.
+
 Format:
 
 ```yaml
@@ -53,6 +55,7 @@ The orchestrator validates your manifest against every other running worker's ma
    - If `available_integrations` is non-empty, note each integration's module path. When your feature needs that integration's capability (e.g., sending an email when `resend` is in the map), **import from the typed wrapper** — do not run `npm install` for it, do not hand-roll a new client. If a needed integration is NOT in the map, report back before proceeding — installing your own would fork the architecture.
 
 2. **Read the skill files** listed in `feature.skills`. Resolve short names using the orchestrator's mapping table (or grep `{knowledge_repo}/skills/**/*.md` for unfamiliar names). Treat each skill's "Guidelines" and "Checklist" sections as requirements.
+   - If a skill prescribes a library that is **not installed** and installing it would mean touching a file outside your manifest (`package.json` is a shared resource): do not install it. Use the closest platform-native fallback that honors the skill's *intent* (e.g., a controlled input instead of react-hook-form for a trivial form), and record the substitution in your report's `notes` so the orchestrator can add the dependency centrally if the pattern recurs.
 
 3. **Read existing project files** to understand current code style (formatting, imports, naming, file layout). Use Glob to enumerate `src/` and read 2–3 representative files.
 
@@ -150,6 +153,7 @@ You are running inside a parallel wave alongside other workers the orchestrator 
 - Append a heartbeat line **at least every 60 seconds** of wall-clock time.
 - Append a heartbeat line **after every meaningful step**: a file created, a file edited, a test run started or finished, a shell command invoked, an error caught.
 - The two rules OR together — whichever fires first, log.
+- **Before starting a command that may run long** (`npm install`, a full test suite, a production build), emit a heartbeat saying so — e.g. `[writing-files] starting npm install (may take minutes)`. You cannot log *during* a blocking command; announcing it beforehand is what keeps the monitor from reading the silence as a stall.
 
 ### Line format
 
