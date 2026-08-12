@@ -34,11 +34,13 @@ const args = process.argv.slice(2);
 let blueprintArg = null;
 let kbArg = null;
 let allowUnknownSkills = false;
+let emitJson = false;
 for (let i = 0; i < args.length; i++) {
   const a = args[i];
   if (a === '--help' || a === '-h') { printUsage(); process.exit(0); }
   else if (a === '--knowledge-base') { kbArg = args[++i]; }
   else if (a === '--allow-unknown-skills') { allowUnknownSkills = true; }
+  else if (a === '--emit-json') { emitJson = true; }
   else if (a.startsWith('--')) {
     process.stderr.write(`unknown option: ${a}\n`);
     printUsage();
@@ -918,6 +920,12 @@ const allDiagnostics = [...errors, ...warnings];
 allDiagnostics.sort((a, b) => (a.line || 0) - (b.line || 0));
 
 if (errors.length === 0) {
+  if (emitJson) {
+    // Machine output for downstream tooling (plan-waves.mjs): the parsed,
+    // validated blueprint. Symbol-keyed line metadata drops out naturally.
+    process.stdout.write(JSON.stringify(doc, null, 2) + '\n');
+    process.exit(0);
+  }
   // print warnings if any
   for (let i = 0; i < warnings.length; i++) {
     const w = warnings[i];

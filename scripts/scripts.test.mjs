@@ -159,6 +159,83 @@ test('skill map: hand-edited directory README fails --check', () => {
   }
 });
 
+// ---------- plan-waves.mjs ----------
+
+function plan(yamlText) {
+  const file = join(tmp, `plan-${Math.random().toString(36).slice(2)}.yaml`);
+  writeFileSync(file, yamlText);
+  const r = run('node', ['scripts/plan-waves.mjs', file]);
+  return { ...r, plan: r.status === 0 ? JSON.parse(r.stdout) : null };
+}
+
+const PARALLEL_BP = `name: p
+description: d
+stack:
+  type: spa
+features:
+  - name: a
+    description: feature a
+    skills: [styling]
+  - name: b
+    description: feature b
+    skills: [styling]
+  - name: tests
+    description: tests
+    skills: [react-testing]
+`;
+
+test('planner: independent features share a wave; tests wave follows', () => {
+  const { plan: p, status } = plan(PARALLEL_BP);
+  assert.equal(status, 0);
+  assert.equal(p.mode, 'parallel');
+  assert.deepEqual(p.waves, [['a', 'b'], ['tests']]);
+});
+
+test('planner: linear depends_on chain falls back to sequential with the reason', () => {
+  const r = run('node', ['scripts/plan-waves.mjs', 'blueprints/examples/todo-app.yaml']);
+  const p = JSON.parse(r.stdout);
+  assert.equal(p.mode, 'sequential');
+  assert.ok(p.mode_reasons.some((m) => m.includes('no wave has 2+')));
+});
+
+test('planner: missing test feature forces sequential', () => {
+  const { plan: p } = plan(PARALLEL_BP.replace(/  - name: tests[\s\S]*$/, ''));
+  assert.equal(p.mode, 'sequential');
+  assert.ok(p.mode_reasons.some((m) => m.includes('no test feature')));
+});
+
+test('planner: explicit parallel skips safety checks but never a cycle', () => {
+  const { plan: p } = plan(PARALLEL_BP.replace('features:', 'execution: parallel\nfeatures:'));
+  assert.equal(p.mode, 'parallel');
+  assert.ok(p.mode_reasons.some((m) => m.includes('safety checks skipped')));
+});
+
+test('planner: frontend+backend skills mark a feature splittable; fullstack-specialist keywords do not', () => {
+  const bp = `name: s
+description: d
+stack:
+  type: fullstack
+features:
+  - name: notes
+    description: notes feature with api and ui
+    skills: [api-design, react-component]
+  - name: admin-panel
+    description: admin panel to manage users, CRUD for users
+    skills: [api-design, react-component]
+  - name: tests
+    description: tests
+    skills: [react-testing]
+`;
+  const { plan: p } = plan(bp);
+  assert.deepEqual(p.splittable, ['notes']);
+});
+
+test('planner: rejects an invalid blueprint instead of planning it', () => {
+  const { status, stderr } = plan('name: x\nfeatures: []\n');
+  assert.equal(status, 1);
+  assert.match(stderr, /failed validation/);
+});
+
 // ---------- check-references.mjs ----------
 
 test('check-references: passes on the committed repo state', () => {

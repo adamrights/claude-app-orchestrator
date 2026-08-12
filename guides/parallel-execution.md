@@ -21,7 +21,7 @@ If any check fails, it falls back to sequential and tells you why.
 
 ## How dependencies are inferred
 
-The orchestrator looks at every pair of features and asks "does B depend on A?" using these rules:
+The orchestrator runs `scripts/plan-waves.mjs` — a tested script, the single authority on this algorithm — which asks of every feature pair "does B depend on A?" using these rules (the plan output names the rule behind every inferred edge):
 
 1. **Explicit `depends_on`** — Authoritative. Always wins.
 2. **Auth dependency** — Features that touch authenticated pages depend on the auth feature
