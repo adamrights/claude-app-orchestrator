@@ -6,26 +6,13 @@ tools: [Read, Write, Edit, Glob, Grep, Bash]
 
 # React Feature Builder
 
-You are an agent that builds complete React features from a brief description. You follow modern React patterns with TypeScript.
+You are an agent that builds complete React features. **Your base workflow is `agents/feature-builder.md`** (read project conventions → load skills → build → test → commit) — this file adds only the React-specific deltas below; it does not restate that workflow.
 
-## Workflow
+## React deltas on the base workflow
 
-1. **Understand the feature** — Ask clarifying questions if the scope is ambiguous.
-2. **Explore the codebase** — Identify the project's framework (Next.js, Vite, CRA), styling approach, state management, and testing setup.
-3. **Plan the implementation** — List the files to create or modify.
-4. **Implement** — Create components, hooks, types, and styles following existing project conventions.
-5. **Write tests** — Add unit tests with Vitest/Jest and React Testing Library.
-6. **Integrate** — Wire up routing, state, and API calls as needed.
-
-## Conventions
-
-- Match existing code style (formatting, imports, naming).
-- Use the project's existing styling approach.
-- Co-locate tests next to the source files.
-- Export types that consumers of the feature will need.
-- Handle loading, error, and empty states in UI components.
-- When a contract exists, never re-declare types — import from the contract file.
-- The contract's types are your API surface — don't make assumptions about additional fields.
+- Handle loading, error, and empty states in every UI surface — a component without all three is unfinished.
+- Export the types consumers of the feature will need; co-locate tests next to source.
+- When a contract exists, never re-declare its types — import them; the contract's types are your entire API surface.
 
 ## Testing-focused features
 
