@@ -101,29 +101,36 @@ for (let j = 0; j < features.length; j++) {
   for (const d of B.depends_on ?? []) addDep(B.name, d, 'explicit');
   for (let i = 0; i < j; i++) {
     const A = features[i];
-    // rule 2: auth
+    // rule 7 first: declared touches (prefix-glob intersection). Declared intent
+    // is the strongest signal in both directions — an intersection is a hard
+    // edge, and DISJOINT declarations suppress the name-matching heuristics
+    // (rules 3–4) for this pair: the authors told us the file footprints.
+    const ta = A.touches ? [...(A.touches.create ?? []), ...(A.touches.modify ?? [])] : [];
+    const tb = B.touches ? [...(B.touches.create ?? []), ...(B.touches.modify ?? [])] : [];
+    let touchesDisjoint = false;
+    if (ta.length && tb.length) {
+      const base = (g) => g.replace(/\*.*$/, '');
+      const intersects = ta.some((x) => tb.some((y) => base(x).startsWith(base(y)) || base(y).startsWith(base(x))));
+      if (intersects) addDep(B.name, A.name, 'touches-intersect');
+      else touchesDisjoint = true;
+    }
+    // rule 2: auth (ordering policy — never suppressed by touches)
     if (isAuth(A) && !isAuth(B) && authPages.some((p) => p && text(B).includes(p))) {
       addDep(B.name, A.name, 'auth');
     }
-    // rule 3: model overlap
-    if (modelNames.some((m) => text(A).includes(m) && text(B).includes(m))) {
-      addDep(B.name, A.name, 'model-overlap');
-    }
-    // rule 4: page overlap
-    if (pagePaths.some((p) => p !== '/' && text(A).includes(p) && text(B).includes(p))) {
-      addDep(B.name, A.name, 'page-overlap');
-    }
-    // rule 5: tests last
-    if (isTest(B) && !isTest(A)) addDep(B.name, A.name, 'tests-last');
-    // rule 7: declared touches intersect (prefix-glob intersection)
-    const ta = A.touches ? [...(A.touches.create ?? []), ...(A.touches.modify ?? [])] : [];
-    const tb = B.touches ? [...(B.touches.create ?? []), ...(B.touches.modify ?? [])] : [];
-    if (ta.length && tb.length) {
-      const base = (g) => g.replace(/\*.*$/, '');
-      if (ta.some((x) => tb.some((y) => base(x).startsWith(base(y)) || base(y).startsWith(base(x))))) {
-        addDep(B.name, A.name, 'touches-intersect');
+    // rules 3–4: name-matching heuristics — skipped when declared touches prove disjoint footprints
+    if (!touchesDisjoint) {
+      if (modelNames.some((m) => text(A).includes(m) && text(B).includes(m))) {
+        addDep(B.name, A.name, 'model-overlap');
       }
+      if (pagePaths.some((p) => p !== '/' && text(A).includes(p) && text(B).includes(p))) {
+        addDep(B.name, A.name, 'page-overlap');
+      }
+    } else if (modelNames.some((m) => text(A).includes(m) && text(B).includes(m))) {
+      warnings.push(`model-overlap edge ${B.name} → ${A.name} suppressed: both declare disjoint touches`);
     }
+    // rule 5: tests last (policy — never suppressed)
+    if (isTest(B) && !isTest(A)) addDep(B.name, A.name, 'tests-last');
   }
 }
 

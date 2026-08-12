@@ -42,6 +42,10 @@ Features are the most important field. Each feature becomes a git commit and a u
 | Auth flows | `authentication`, `react-hooks` |
 | Tests | `react-testing` (component) or `e2e-testing` (browser) |
 
+## Declaring `touches:` (optional, but it sharpens the plan)
+
+If you know a feature's file footprint, declare it on the feature entry. Two payoffs in planning: features whose declared footprints intersect are automatically serialized, and features whose footprints are **disjoint** escape the name-matching heuristics (two features mentioning the same model no longer serialize just for sharing a noun). If one feature scaffolds a stub another replaces, put the seam file in both manifests — that's how the planner learns about handoff seams.
+
 ## Writing good `models`
 
 Use the simplified Prisma-like syntax. Common patterns:

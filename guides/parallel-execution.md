@@ -148,6 +148,10 @@ touches:
     - src/lib/date.ts
 ```
 
+Declared `touches:` in the **blueprint** feature entries do double duty in planning (`scripts/plan-waves.mjs`): intersecting declarations force a dependency edge, and **disjoint declarations suppress the name-matching heuristics** — two features that both mention "ticket" but declare non-overlapping footprints can share a wave. Declared intent beats keyword guessing.
+
+**Stub-handoff seams**: when feature A scaffolds a mount-point that feature B later replaces (a page stub, a placeholder component), that's a real dependency no name-matching can see. Declare the seam file in **both** features' `touches:` — A under `create`, B under `modify` — and the planner serializes them via the touches rule. Don't leave the seam implicit; a parallel wave will overwrite it.
+
 ### Worked example: two features want `src/lib/date.ts`
 
 Suppose your blueprint has:
