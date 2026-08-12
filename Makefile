@@ -1,7 +1,7 @@
 # claude-app-orchestrator Makefile
 # Cheap, discoverable entry points for the common operations.
 
-.PHONY: help install uninstall validate build audit check refs skillmap
+.PHONY: help install uninstall validate build audit check refs skillmap test
 
 help: ## Show this help
 	@echo "Recipes:"
@@ -13,6 +13,7 @@ help: ## Show this help
 	@echo "  check                            Validate every blueprint in blueprints/examples/ and examples/built/"
 	@echo "  refs                             Lint cross-references between agents, skills, templates, blueprints"
 	@echo "  skillmap                         Regenerate skill map outputs from skills/manifest.yaml"
+	@echo "  test                             Run the script test suite (validator, skill map, refs, install.sh)"
 	@echo ""
 	@echo "Examples:"
 	@echo "  make install"
@@ -62,3 +63,6 @@ refs:
 
 skillmap:
 	@node scripts/build-skill-map.mjs
+
+test:
+	@node --test scripts/scripts.test.mjs

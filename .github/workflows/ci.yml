@@ -23,6 +23,9 @@ jobs:
       - name: Cross-references (agents ↔ skills ↔ templates ↔ blueprints)
         run: node scripts/check-references.mjs
 
+      - name: Script test suite
+        run: node --test scripts/scripts.test.mjs
+
       - name: Validate every blueprint
         run: |
           status=0
