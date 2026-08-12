@@ -202,6 +202,9 @@ function parseYaml(text) {
         // Block child on next lines at indent+2 (or +4 tolerated)
         const child = parseBlockChild(indent + 2);
         items.push(child);
+      } else if (afterDash.startsWith('{') || afterDash.startsWith('[')) {
+        // Flow-style list item: "- {name: a, skills: [x]}" or "- [a, b]"
+        items.push(parseInlineValue(afterDash, lineNo));
       } else if (looksLikeMapEntry(afterDash, lineNo)) {
         // Inline map item: "- key: value" — first key sits at virtual indent (indent+2),
         // additional keys for the same item appear on following lines at indent+2.
@@ -354,7 +357,8 @@ function parseYaml(text) {
           const k = p.slice(0, c).trim();
           const v = p.slice(c + 1).trim();
           obj[LINES_KEY][k] = lineNo;
-          obj[k] = parseScalar(v, lineNo);
+          // Recurse so nested flow values ("skills: [a, b]") parse as lists, not strings.
+          obj[k] = parseInlineValue(v, lineNo);
         }
       }
       return obj;
