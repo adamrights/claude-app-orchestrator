@@ -12,6 +12,27 @@ When writing tests for React components and hooks.
 | MSW (Mock Service Worker) | API mocking at the network level |
 | Playwright | End-to-end browser testing |
 
+## Testing Routes (jsdom pitfall)
+
+Do **not** test routing with `createMemoryRouter`/`createBrowserRouter` under jsdom: react-router's data routers build a fetch `Request` per navigation, and jsdom's `AbortSignal` isn't accepted by Node's undici — navigations hang silently and `findBy*` queries time out with no error. Test routes with the classic router instead:
+
+```tsx
+import { MemoryRouter, useRoutes } from 'react-router-dom';
+import { routes } from '@/router'; // export your RouteObject[] separately from the router instance
+
+function RoutedApp() {
+  return useRoutes(routes);
+}
+
+render(
+  <MemoryRouter initialEntries={['/habits']}>
+    <RoutedApp />
+  </MemoryRouter>,
+);
+```
+
+`<Navigate>` redirects and `<NavLink>` clicks resolve synchronously in this setup — no `findBy*` needed for navigation. Reserve data-router testing (loaders/actions) for Playwright, where a real browser provides a real `AbortSignal`.
+
 ## Component Test Pattern
 
 ```tsx

@@ -267,12 +267,15 @@ For each feature in the wave, decide:
 
 - **Single-agent feature** (not splittable): spawn ONE Feature Builder agent
 - **Splittable feature**: run layer-level split (see below)
+- **A wave containing exactly one feature** may instead be built directly by the orchestrator following the Sequential Mode rules (no worktree, no spawn) — the isolation buys nothing when there are no siblings.
 
 For each agent you spawn:
 
-1. Create a worktree for the feature using the Agent tool with `isolation: "worktree"`. The worktree is automatically created on a branch named after the feature.
+1. Create a worktree for the feature **manually on the output repo**: `git -C {output_dir} worktree add ../wt-{feature.name} -b feat/{feature.name}`. Do NOT rely on the Agent tool's `isolation: "worktree"` — that isolates the repo the orchestrator session runs in (typically the knowledge repo), not the app being built.
 2. Use the agent definition at `agents/feature-builder.md` as the worker.
 3. Pass a **self-contained prompt** with all necessary context (the agent has no memory of this conversation). Compute `available_integrations` from Phase 1.5's installed integrations (map of `{service_name: module_path}` for every integration successfully installed; empty `{}` if Phase 1.5 had no integrations or was skipped).
+
+   Background workers cannot pause for the kickoff approval round-trip, so **pre-approve their manifests**: derive each feature's expected `touches:` from the blueprint (its owned directories/files), verify the manifests are mutually disjoint and clear of the Shared Resource Registry BEFORE spawning, and state the pre-approved manifest in the prompt with the rule "exceeding it = stop and report failure". Also tell each worker to run the project's install command in its worktree first — worktrees share git history but not `node_modules`.
 
    ```
    You are a Feature Builder. Read agents/feature-builder.md for your workflow.
