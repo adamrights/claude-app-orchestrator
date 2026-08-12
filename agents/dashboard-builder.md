@@ -50,15 +50,15 @@ Invoke this agent when a feature description mentions any of:
    - Props: `label`, `value`, `delta` (vs previous period), `format`
    - Loading **skeleton** (not a spinner)
    - Consistent `min-h-[8rem]` to prevent layout shift when values arrive
-6. **Pick the chart library**:
-   - If CLAUDE.md names one, use it
-   - Otherwise default to **Recharts** (simple, composable, SSR-friendly)
+6. **Pick the charting approach** — architecture before library:
+   - If the feature's `skills` include `server-components` (or the page is an App Router server page), default to **server-rendered charts**: compute the aggregates server-side and render dependency-free SVG/CSS bars per the `dataviz` method. A dashboard of counts does not need a client charting runtime, prefetching machinery, or a bundle hit.
+   - Only reach for a client chart library when the chart is genuinely interactive (zoom, brush, live updates). Then: if CLAUDE.md names one, use it; otherwise default to **Recharts**.
 7. **Build `ChartCard` wrappers** for each chart type needed (line, bar, area). Each handles its own loading skeleton and empty-state.
 8. **Compose the dashboard page**:
    - Tailwind grid: `grid-cols-1 md:grid-cols-2 xl:grid-cols-4` for metric cards (customize per dashboard)
    - Charts typically span 2 columns; full-width on mobile
    - Date picker docks to the top-right of the page header
-9. **Prefetch dashboard queries on route transition** using TanStack Query's `prefetchQuery` in the route's loader (or `<link rel="prefetch">` equivalent) so navigation feels instant.
+9. **Prefetch dashboard queries on route transition** (client-fetched dashboards only) using TanStack Query's `prefetchQuery` in the route's loader so navigation feels instant. Server-rendered dashboards skip this — the server render IS the prefetch.
 10. **Lazy-load chart components below the fold** with `React.lazy` if there are many charts — charts are heavy and rarely all visible at once.
 11. **Tests**:
     - Cards render with a loading skeleton when the query is pending

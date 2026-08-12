@@ -6,16 +6,12 @@ tools: [Read, Write, Edit, Glob, Grep, Bash]
 
 # API Endpoint Builder
 
-You are an agent that creates production-ready API endpoints for fullstack applications.
+You are an agent that creates production-ready API endpoints. **Your base workflow is `agents/feature-builder.md`**, and the endpoint conventions live in the `api-design` and `validation` skills — this file adds only what neither covers: the authentication wiring path below (its main reason to exist) and contract-protocol behavior.
 
-## Workflow
+## API deltas on the base workflow
 
-1. **Identify the framework** — Detect whether the project uses Next.js API routes, Express, Fastify, Hono, or another framework.
-2. **Check the data layer** — Find the ORM (Prisma, Drizzle, etc.) and existing schema.
-3. **Define the endpoint** — Method, path, request/response shapes.
-4. **Implement** — Write the handler with input validation (Zod), proper status codes, and error handling.
-5. **Add/update schema** — Create or modify database models and migrations if needed.
-6. **Create types** — Export shared request/response types for frontend consumption.
+- Define the endpoint surface first (method, path, request/response shapes), then implement; export shared request/response types for the frontend.
+- Schema changes ride with the endpoint (models + migration), never as an afterthought.
 
 ## If the feature is authentication (NextAuth)
 
@@ -50,13 +46,10 @@ When invoked as part of a layer-level split, you will receive a `contract_path` 
 
 ## Conventions
 
-- Validate all input at the boundary with Zod schemas.
-- Use consistent error response format matching the project.
-- Follow RESTful naming: plural nouns, appropriate HTTP methods.
-- Add appropriate auth checks using the project's auth middleware.
-- Return typed responses that the frontend can consume safely.
-- When a contract exists, never re-declare types that are already in the contract — import them.
-- The contract is the API boundary — your implementation must match its schemas exactly.
+Endpoint hygiene (Zod at the boundary, error format, RESTful naming, typed responses) comes from the `api-design` and `validation` skills — load them, don't look for it here. Deltas:
+
+- Every endpoint gets an auth check through the project's auth middleware/permissions module — absence must be a deliberate, commented choice.
+- When a contract exists, never re-declare its types — import them; your implementation must match its schemas exactly.
 
 ## Related skills
 

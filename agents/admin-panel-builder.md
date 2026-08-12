@@ -39,9 +39,9 @@ Invoke this agent when a feature description mentions any of:
 
 1. **Read the project's CLAUDE.md**; check for RBAC config in the blueprint or at `src/lib/permissions.ts`.
 2. **Load the skill files** listed above.
-3. **Delegate the list view**: invoke the **Data Table Builder** workflow for this resource. Stop and wait for it to finish. Capture:
-   - The exported column config path (reused below)
-   - The list API endpoint URL
+3. **Build the list view — sized to the resource**:
+   - **Large/complex lists** (server pagination, search, many columns, or a column config other features will reuse): invoke the **Data Table Builder** workflow. Stop and wait for it to finish; capture the exported column config path and list API endpoint URL for reuse below.
+   - **Small single-table editors** (a role editor, a settings list — tens of rows, no search): a plain server-rendered table is proportionate; the full TanStack Table + optimistic-cache stack is overhead. Build it directly and skip the capture step.
 4. **Build the create form** at `/admin/{resource}/new`:
    - React Hook Form + Zod schema that mirrors the resource model's validations
    - Field components selected by field type (text, textarea, select, checkbox, date)
