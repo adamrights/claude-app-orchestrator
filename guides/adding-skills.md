@@ -59,13 +59,9 @@ make refs            # verifies everything is in sync
 
 Never edit the generated table in `agents/orchestrator.md` by hand — `make refs` fails on drift.
 
-## 4. Update the directory README
+## 4. That's it — the READMEs are generated
 
-Add a link to your new skill in `skills/{category}/README.md`:
-
-```markdown
-- [Your Skill Name](your-skill-name.md) — One-line description
-```
+`make skillmap` (step 3) also regenerates `skills/{category}/README.md` and `skills/MAP.md` from the manifest. Don't edit them by hand — `make refs` fails on drift.
 
 ## Tips
 

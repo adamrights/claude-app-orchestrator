@@ -33,9 +33,9 @@ The repo gives Claude agents two things: (1) coding **skills** to follow, and (2
 
 ## Quick Start
 
-1. Copy a blueprint example: `cp blueprints/examples/todo-app.yaml my-app.yaml`
-2. Edit the blueprint to describe your app
-3. Tell Claude Code: *"Read agents/orchestrator.md and build my-app.yaml into ./my-app/"*
+1. Copy a blueprint example: `cp blueprints/examples/todo-app.yaml my-app.yaml` and edit it (or plan a foggy idea into one with `/wayfind`)
+2. `/validate my-app.yaml`
+3. `/orchestrate my-app.yaml ./my-app` (slash commands installed via `./install.sh`; manual incantations live in CHEATSHEET.md)
 
 The orchestrator picks a template from the blueprint's `stack` declaration, scaffolds the project, then dispatches specialist agents (with relevant skills loaded) to build each feature. By default it runs features in **parallel** (in isolated worktrees) when their dependencies allow it — see [guides/parallel-execution.md](guides/parallel-execution.md).
 
@@ -45,4 +45,4 @@ The orchestrator picks a template from the blueprint's `stack` declaration, scaf
 - Agents are Markdown files with YAML frontmatter (name, description, tools) and a workflow section
 - Blueprints are YAML files describing apps declaratively
 - Templates are minimal starter file trees under `templates/{name}/files/`
-- Update each directory's README when adding new files
+- Update each directory's README when adding new files — except `skills/*/README.md` and `skills/MAP.md`, which are generated from the manifest (`make skillmap`)

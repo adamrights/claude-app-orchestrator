@@ -19,6 +19,6 @@ Blueprints are YAML files that declaratively describe an app to be built. The or
 
 1. Copy an example: `cp blueprints/examples/todo-app.yaml my-app.yaml`
 2. Edit it to describe your app
-3. Tell Claude Code: *"Read agents/orchestrator.md and build my-app.yaml into ./my-app/"*
+3. `/validate my-app.yaml`, then `/orchestrate my-app.yaml ./my-app` (see [guides/orchestrator-usage.md](../guides/orchestrator-usage.md))
 
 The orchestrator infers the template from the `stack.type` field unless you set `template:` explicitly. See [schema.md](schema.md) for all available fields.

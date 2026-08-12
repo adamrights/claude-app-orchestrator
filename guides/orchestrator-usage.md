@@ -1,49 +1,34 @@
 # Using the Orchestrator
 
-The orchestrator agent (`agents/orchestrator.md`) turns a blueprint YAML into a working app. This guide walks through the end-to-end workflow.
+The orchestrator (`agents/orchestrator.md`) turns a blueprint YAML into a working app. Install once (`./install.sh`), then the whole journey is four commands:
 
-## 1. Pick or write a blueprint
-
-Start from an example:
-
-```bash
-cp blueprints/examples/todo-app.yaml ~/projects/my-todo.yaml
+```
+/wayfind "idea"        # optional — only when the idea is still foggy (guides/wayfinding.md)
+/validate my-app.yaml  # pre-flight: schema, skills, dependency cycles
+/orchestrate my-app.yaml ./my-app
+/resume ./my-app       # only if a build gets interrupted (guides/resuming-builds.md)
 ```
 
-Edit the file to describe your app. The minimum is `name`, `description`, and at least one entry under `features`. See [blueprint-authoring.md](blueprint-authoring.md) for guidance.
+## What a build does
 
-## 2. Invoke the orchestrator from Claude Code
+1. **Plan** — infers dependencies between features and groups them into waves; independent features build **in parallel** in isolated git worktrees when the safety checks pass, sequentially otherwise (details: [parallel-execution.md](parallel-execution.md)).
+2. **Scaffold** — picks a template from `stack.type`, generates the schema from `models`, installs, commits.
+3. **Build** — each feature goes to the right specialist agent with its skills loaded; tests run and each feature becomes its own commit. v2 blueprints also get integrations, shared primitives, RBAC, jobs, and webhooks phases.
+4. **Review** — full test suite, code-review pass, production build, final commit.
 
-Open Claude Code in any directory and ask:
+## What lands in the output directory
 
-> Read `/path/to/claude-code-knowledge/agents/orchestrator.md` and build `/path/to/my-todo.yaml` into `/path/to/my-todo/`.
+- **The app**, one git commit per feature — review with `git log`, revert a feature commit and ask for a redo if something looks wrong.
+- **`BUILD_REPORT.md`** — the human-facing story: what was built, how to run it, env vars still needed.
+- **`.claude-build/map.yaml`** — the machine-facing Build Map: every unit's status + commit, and every decision made after the blueprint was frozen. This is what makes `/resume` and decision-consistent multi-session builds work.
 
-The orchestrator will:
+## When something goes wrong
 
-1. **Phase 1 — Scaffold**: Pick a template based on the blueprint's `stack.type`, copy the template files, generate the database schema from `models`, run `npm install`, and create an initial git commit.
-2. **Phase 2 — Build features**: For each feature in order, load the relevant skill files, build the feature using the right specialist agent, run tests, and commit.
-3. **Phase 3 — Integration**: Run the full test suite, run a code review pass, run `npm run build`, and make a final commit.
+- **Blueprint is wrong mid-build** — the orchestrator stops rather than improvising; fix the blueprint (reopen the wayfinder map ticket if there is one) and re-run. Never edit the blueprint mid-build.
+- **A worker hits an unsettled one-way-door decision** — it reports `blocked-on-decision` instead of guessing; you'll be asked, and the answer is recorded in the Build Map for every later worker and session.
+- **Session dies** — `/resume <dir>` verifies the blueprint hash and git history, then continues from the first pending unit.
 
-## 3. Review the output
+## After the build
 
-Each feature is its own git commit, so you can `git log` and review them one at a time. If anything looks wrong, you can revert a single commit and ask Claude to redo just that feature.
-
-## Troubleshooting
-
-**Wrong template selected**: Set `template:` explicitly in the blueprint to override stack-based inference.
-
-**`npm install` fails**: The orchestrator should retry after fixing version conflicts. If it doesn't, check the project's `package.json` and your local Node version (the templates target Node 20+).
-
-**A feature builds the wrong thing**: The feature `description` field is the primary instruction the orchestrator follows — make it more specific. You can also add or remove items from the `skills` array to change which guidelines are loaded.
-
-**Tests fail**: The orchestrator switches into the Fullstack Debugger workflow on test failure. If it's stuck in a loop, stop it and look at the test output yourself.
-
-**Skill not found**: The skill short name in your feature's `skills` array doesn't match the orchestrator's mapping table. Either fix the name or add the skill to `skills/` and update the mapping in `agents/orchestrator.md`.
-
-## Doing parts manually
-
-You don't have to use the full orchestrator. You can:
-
-- Run only Phase 1 by invoking `agents/project-initializer.md` directly
-- Build a single feature by invoking `agents/react-feature-builder.md` or `agents/api-endpoint-builder.md` and pointing it at the relevant skills
-- Use the orchestrator for scaffolding, then build features yourself
+- `/audit` (in the app dir) — React performance review.
+- `/extend "feature description"` — add a feature; the app's recorded decisions are inherited, and genuinely foggy extensions reopen the wayfinder map.

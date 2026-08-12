@@ -1,9 +1,9 @@
 # Planning Skills
 
-Skills for the phase *before* a blueprint exists — turning foggy ideas into resolved decisions.
+<!-- Generated from skills/manifest.yaml by scripts/build-skill-map.mjs. Do not edit by hand: edit the manifest, then run `make skillmap`. -->
 
-| Skill | What it covers |
-|-------|----------------|
-| [decision-mapping.md](decision-mapping.md) | Writing and maintaining a wayfinder map: decision tickets, resolutions, map hygiene, anti-patterns |
+| Skill | What it covers | Load when |
+|-------|----------------|-----------|
+| [`decision-mapping`](decision-mapping.md) | Wayfinder maps — decision tickets, resolutions, map hygiene, anti-patterns | wayfinding sessions; any plan that must survive session boundaries |
 
-Planning skills are loaded by the Wayfinder agent (`agents/wayfinder.md`), not by build-phase specialists — they have Layer `planning` in the skill map and never count toward frontend/backend split detection.
+Full cross-domain index: [../MAP.md](../MAP.md)
