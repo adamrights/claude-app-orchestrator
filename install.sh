@@ -62,7 +62,7 @@ install_commands() {
       local target; target="$(readlink "$dest")"
       if [[ "$target" == "$src" ]]; then
         ok "already linked: /$name (no change)"
-        ((count++))
+        count=$((count + 1))
         continue
       else
         err "$dest is a symlink to $target — refusing to clobber. Remove it manually if you want to install."
@@ -75,7 +75,7 @@ install_commands() {
 
     ln -s "$src" "$dest"
     ok "linked: /$name → $src"
-    ((count++))
+    count=$((count + 1))
   done
   shopt -u nullglob
 
@@ -98,7 +98,7 @@ uninstall_commands() {
       if [[ "$target" == "$src" ]]; then
         rm -- "$dest"
         ok "removed: /$name"
-        ((removed++))
+        removed=$((removed + 1))
       else
         warn "skipped: $dest points to $target (not ours)"
       fi
