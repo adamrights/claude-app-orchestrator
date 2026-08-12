@@ -71,7 +71,7 @@ Load these skill files before starting implementation:
    - `form.tsx` — react-hook-form integration with `Form` (FormProvider wrapper), `FormField`, `FormItem`, `FormLabel`, `FormControl`, `FormDescription`, `FormMessage` — exposes a `useFormField()` hook so children read field state from context
 8. **Mount the `TooltipProvider`** at the app root layout if a Tooltip primitive was generated.
 9. **Verify each primitive** renders without TS or lint errors: `tsc --noEmit` and the project's lint command.
-10. **Commit each primitive batch separately** so reviewers can scan diffs primitive-by-primitive.
+10. **Commit granularity follows the caller**: invoked as a `shared:` entry, make ONE commit (`feat(shared): {name}`) per the orchestrator's Pre-Wave contract; only when invoked standalone, commit each primitive batch separately for reviewability.
 
 ## Conventions
 

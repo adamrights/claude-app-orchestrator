@@ -45,7 +45,7 @@ models:
         validation: z.string().email()
       name: string
         validation: z.string().min(1).max(100)
-      # role drives every RBAC check in lib/rbac.ts; default is set at signup
+      # role drives every RBAC check in src/lib/permissions.ts; default is set at signup
       role: string @default(customer)
         validation: z.enum(["customer", "agent", "admin"])
       # Prisma requires named relations when two fields target the same model
@@ -83,7 +83,7 @@ models:
       author: User @relation
       body: string
         validation: z.string().min(1).max(5000)
-      # internal notes are visible only to agents/admins — enforced in lib/rbac.ts
+      # internal notes are visible only to agents/admins — enforced in src/lib/permissions.ts
       isInternalNote: boolean @default(false)
       createdAt: datetime @default(now())
 
@@ -137,7 +137,7 @@ rbac:
 
 # -----------------------------------------------------------------------------
 # Integrations — Resend for transactional email. The integration-specialist
-# wraps the SDK in a typed client at lib/email.ts so feature code never
+# wraps the SDK in a typed client at src/integrations/resend.ts so feature code never
 # touches the raw SDK.
 # -----------------------------------------------------------------------------
 integrations:
@@ -293,7 +293,7 @@ features:
   # cron twice, causing double execution and duplicate notification emails.)
 
   # 10. Email notifications — assignment, customer reply, resolution. Wraps
-  #     the lib/email.ts client created by integration-specialist.
+  #     the src/integrations/resend.ts client created by integration-specialist.
   - name: email-notifications
     description: Send transactional email on ticket assignment, new comment, and status change to resolved
     skills: [api-design]

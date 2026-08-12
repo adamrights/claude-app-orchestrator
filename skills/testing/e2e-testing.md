@@ -45,6 +45,7 @@ test('user can create a post', async ({ page }) => {
 
 ## Guidelines
 - Test critical paths: signup, login, core CRUD, checkout.
+- **OAuth-only apps need a test-auth strategy decided up front** — you cannot drive a third-party OAuth consent screen in CI. Options, in order of preference: a test-only Credentials provider enabled when `NODE_ENV=test`; programmatic session-cookie injection via the auth library's JWT helpers; recorded storage state from a manual login (rots fastest). Without one, RBAC/e2e specs against signed-in flows must be `test.fixme`, not deleted.
 - Use Page Object Model for shared page interactions.
 - Run e2e tests in CI against preview deployments.
 - Keep e2e suite small and focused — prefer integration tests for breadth.

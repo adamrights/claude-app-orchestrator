@@ -131,7 +131,7 @@ Adapt the middleware signature to match the project's framework (Next.js middlew
 
 ### Step 5: Wire up default role assignment
 
-Find the user creation flow (typically in the auth setup or an invitation handler) and ensure new users are assigned the `default_role`. If tenancy is enabled, the default role applies to the user's membership in the organization, not the user record itself.
+This step is usually DEFERRED: in Wave 0 no user-creation flow exists yet. Set the schema default now (`role String @default("{default_role}")`) and record a note for the auth feature's builder to honor `default_role` in its signup/JWT callback; wire an invitation handler only if one already exists. If tenancy is enabled, the default role applies to the user's membership in the organization, not the user record itself.
 
 ### Step 6: Verify
 

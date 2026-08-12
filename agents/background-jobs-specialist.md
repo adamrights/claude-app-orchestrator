@@ -33,7 +33,7 @@ Read `{output_dir}/package.json` and look for an existing job framework:
 | `node-cron` | Plain Node cron |
 
 If none is found, choose based on the project's stack:
-- **Serverless / Next.js** → recommend and install Inngest (`npm install inngest`)
+- **Serverless / Next.js** → recommend and install Inngest (`npm install inngest@^4`). If npm fails with ERESOLVE on inngest's optional framework peers, retry with `--legacy-peer-deps` — then **immediately run a plain `npm install` and the test suite**: the flag can silently prune existing dev dependencies (it removed `@testing-library/dom` in a live build).
 - **Node / Hono API** → recommend and install BullMQ (`npm install bullmq`) plus `node-cron` for cron jobs (`npm install node-cron`)
 
 ### Step 3: Create the job handler
@@ -48,8 +48,9 @@ import { inngest } from "@/lib/inngest";
 import { db } from "@/db";
 
 export const sendWeeklyDigest = inngest.createFunction(
-  { id: "send-weekly-digest" },
-  { cron: "0 9 * * 1" },
+  // inngest v4 API: the trigger belongs in the first argument.
+  // (v3's separate `{ cron }` second argument hard-errors on v4.)
+  { id: "send-weekly-digest", cron: "0 9 * * 1" },
   async ({ step }) => {
     const users = await step.run("fetch-users", async () => {
       return db.user.findMany({ where: { active: true } });
@@ -103,6 +104,8 @@ export async function enqueueUpload(data: { fileUrl: string }) {
 ### Step 6: Verify the job
 
 Run `npm run build` (or `npx tsc --noEmit`) to confirm the handler compiles. For cron jobs, verify the cron expression is valid.
+
+Compilation is NOT execution: an Inngest cron never fires unless `inngest-cli dev` (or Inngest Cloud) is connected to the serve route. State the runtime prerequisite explicitly in BUILD_REPORT.md — a "done" jobs phase that omits it ships a job that silently never runs.
 
 ### Step 7: Commit
 

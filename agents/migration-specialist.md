@@ -63,7 +63,7 @@ The orchestrator passes you:
    If any destructive operation is present, **stop before applying** and report the SQL to the orchestrator with `status: needs_user_approval`. Do not apply the migration. The user must explicitly confirm destructive changes.
 
 7. **Apply the migration** (only if no destructive operations were detected):
-   - **Prisma**: `npx prisma migrate dev` (without `--create-only` this time, so it applies)
+   - **Prisma**: `npx prisma migrate deploy` — never bare `migrate dev` in orchestration: it prompts interactively and hangs without a TTY
    - **Drizzle**: `npx drizzle-kit push` (or the project's configured apply command, per CLAUDE.md)
 
 8. **Commit** the migration file(s):
