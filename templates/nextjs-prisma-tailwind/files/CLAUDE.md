@@ -8,7 +8,7 @@
 - **Auth**: NextAuth.js
 - **Validation**: Zod
 - **Testing**: Vitest + React Testing Library
-- **Lint/Format**: ESLint (flat config) + Prettier
+- **Lint/Format**: ESLint (`.eslintrc.json`, via `next lint`) + Prettier
 - **Git hooks**: Husky + lint-staged
 
 ## Commands
@@ -94,9 +94,10 @@ The app container (built from `Dockerfile`) uses Next.js `output: 'standalone'`,
 runs as non-root user `nextjs`, and starts via `node server.js`.
 
 ## Linting & Formatting
-- Flat ESLint config at `eslint.config.mjs` extends `next/core-web-vitals` +
-  `next/typescript` and adds: no-unused-vars (error), consistent-type-imports
-  (error), no-console (warn, allows `warn`/`error`).
+- ESLint config at `.eslintrc.json` extends `next/core-web-vitals` and adds
+  no-console (warn, allows `warn`/`error`). Next 14's `next lint` reads
+  eslintrc-style config only — don't convert to a flat `eslint.config.*` file
+  (and keep `eslint` on v8: `eslint-config-next@14` peer-requires it).
 - Prettier config in `.prettierrc` (singleQuote, trailingComma all, width 100).
 - Husky runs `npm run lint && npm run typecheck` on pre-commit. Hooks install
   automatically on `npm install` via the `prepare` script. If `.husky/pre-commit`
