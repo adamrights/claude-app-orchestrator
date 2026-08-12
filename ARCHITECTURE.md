@@ -43,7 +43,8 @@ Rule of thumb: **anything listed as generated is never edited by hand** — edit
 
 Zero-dep Node scripts in `scripts/`, all pinned by `scripts.test.mjs` (`make test`, CI):
 
-- `validate-blueprint.mjs` — contract enforcement (schema, skills, cycles)
+- `validate-blueprint.mjs` — contract enforcement (schema, skills, cycles); `--emit-json` feeds downstream tooling
+- `plan-waves.mjs` — deterministic Phase 0: dependency inference, waves, safety heuristics, splittable detection (the orchestrator runs it instead of re-deriving the algorithm)
 - `build-skill-map.mjs` — generates everything derived from the skills manifest; `--check` = drift gate
 - `check-references.mjs` — cross-reference lint (agents ↔ skills ↔ templates ↔ blueprints)
 

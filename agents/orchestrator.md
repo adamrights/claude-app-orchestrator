@@ -65,63 +65,23 @@ Shared files (any feature touching these must be serialized or routed through th
 
 A blueprint may extend this list via a top-level `shared_resources:` array. Always treat the union of the default list and the blueprint extension as the active registry. Print the active registry before wave computation so the user can see what is being guarded.
 
-### Step 1: Read execution mode
+### Step 1: Run the planner
 
-Look at the blueprint's top-level `execution` field:
-- `parallel` — always parallel; skip safety checks
-- `sequential` — always sequential; skip the rest of Phase 0
-- `auto` (default) — run inference and safety checks below
+The execution-plan algorithm lives in a tested script — **the script is the authority**; do not re-derive dependencies, waves, or safety checks by hand:
 
-### Step 2: Compute dependencies between features
+```
+node {knowledge_repo}/scripts/plan-waves.mjs {blueprint_path}
+```
 
-For each pair of features (A, B) where B comes after A in the blueprint, B **depends on** A if any of these rules fire:
+It validates the blueprint, applies the dependency rules (explicit `depends_on`, auth, model/page overlap, tests-last, declared-`touches` intersection), detects cycles, computes topological waves, applies the parallel-safety heuristics, and flags splittable features (frontend+backend skill layers, minus fullstack-specialist features, honoring explicit `splittable:` overrides). The JSON output includes a `rule` for every inferred edge and a `mode_reasons` list for the mode decision — surface those reasons to the user verbatim.
 
-1. **Explicit**: B has `depends_on: [A]` in its blueprint entry. Hard dependency, always wins.
-2. **Auth**: A's name is `auth`, OR A's `skills` includes `authentication`. Then B depends on A if any page B references has `auth: true` in the blueprint's `pages` section.
-3. **Model overlap**: Both A and B mention the same model name (case-insensitive substring match against blueprint `models` keys) in their `description` or `name`. B depends on A.
-4. **Page overlap**: Both A and B name the same page path in their `description` or in any `pages[].features` references. B depends on A.
-5. **Test → impl**: A's name contains `test` (or its `skills` include `react-testing` / `e2e-testing`). Then A depends on every prior non-test feature. (This means tests run last in their own wave.)
-6. **Schema migration order**: A and B both touch the `models` section by name. B depends on A. (Prevents two agents racing on `prisma/schema.prisma`.)
-7. **Shared resource collision**: If two features both declare `touches:` globs that intersect (or both touch a file in the Shared Resource Registry), the later-declared feature depends on the earlier one. If that would produce a cycle or bloat a wave past 4 agents, route both through the Shared Resource Arbitrator post-wave (see Phase 2.5) instead of serializing.
+### Step 2: Review the plan
 
-Build the resulting dependency graph as `{featureName: [list of featureNames it depends on]}`.
+- `mode: sequential` — proceed with Sequential Mode in Phase 2; tell the user which reason forced it (cycle, safety check, or explicit).
+- `mode: parallel` — use the `waves` arrays as-is.
+- **Judgment stays with you**: if two same-wave features' pre-approved manifests would collide on a Shared Resource Registry file the planner couldn't see (no `touches:` declared in the blueprint), either serialize them yourself or plan for Phase 2.5 arbitration — and say which you chose.
 
-Note: Rule 7 requires each feature to have a `touches:` manifest. In `execution: auto` mode, the orchestrator reads the manifest from the blueprint feature entry if present. Otherwise, it prompts the Feature Builder for its kickoff declaration (see `agents/feature-builder.md`) before spawning the full wave and uses that manifest for arbitration.
-
-### Step 3: Detect cycles
-
-Walk the graph. If you find a cycle, **fall back to sequential mode** and report the cycle to the user. Do not attempt to break cycles automatically.
-
-### Step 4: Compute waves
-
-Use topological sort grouped by level:
-- **Wave 0**: features with no dependencies
-- **Wave N**: features whose dependencies are all in waves `< N`
-
-### Step 5: Apply safety heuristics
-
-Run parallel mode only if ALL of these hold (when `execution: auto`):
-- Total features ≤ 20
-- No wave contains more than 4 features (Claude Code parallel agent cap)
-- Dependency graph is acyclic
-- At least one wave has 2+ features (otherwise sequential is just as fast)
-- The blueprint includes at least one feature with `test` in its name or testing skills (parallel work without tests is risky)
-
-If any check fails, fall back to sequential mode. Always tell the user which check failed.
-
-### Step 6: Identify splittable features
-
-A feature is **splittable** (eligible for layer-level parallelism) if its `skills` array contains AT LEAST ONE skill with Layer `frontend` AND AT LEAST ONE skill with Layer `backend` (see `## Skill Mapping` below). Skills with Layer `shared`, `devops`, or `testing` do NOT count toward either side — they're pattern/type-level and don't imply a layer boundary.
-
-A feature can also override auto-detection explicitly:
-- `splittable: false` on the feature entry — forces single-agent build even if the heuristic would split.
-- `splittable: true` — forces a layer split even if the heuristic says no (rare; usually a mistake).
-
-Additionally, if the feature's picker-assigned specialist is itself a fullstack builder (Data Table Builder, Dashboard Builder, Admin Panel Builder) — those already produce both the API and the UI in one agent — then **do not split**, regardless of the skill check. Splitting fights a specialist that's designed to own the whole surface.
-
-Mark these features. They will be built using the layer-level split workflow inside their wave.
-
-### Step 7: Print the plan
+### Step 3: Print the plan
 
 Before proceeding, print a summary the user can review:
 
@@ -135,7 +95,7 @@ Waves: 3
 Splittable features: [todo-list-ui]
 ```
 
-### Step 8: Initialize the Build Map
+### Step 4: Initialize the Build Map
 
 Write the initial `.claude-build/map.yaml` in `{output_dir}` per the Build Map contract (see `## Build Map` below): blueprint path + hash, the plan you just printed, every unit `pending`. From this point on, every phase/wave boundary updates the map — it is what makes the build resumable across sessions.
 

@@ -28,6 +28,7 @@ One-page reference for the common operations. Slash commands assume you've run `
 | Validate every example | `make check` |
 | Lint cross-references (agents, skills, templates) | `make refs` |
 | Regenerate skill map from `skills/manifest.yaml` | `make skillmap` |
+| Compute a blueprint's execution plan (waves) | `node scripts/plan-waves.mjs <blueprint.yaml>` |
 | Print the build incantation | `make build BLUEPRINT=<path> OUT=<dir>` |
 | Build manually (in Claude Code) | `Read agents/orchestrator.md and build <blueprint> into <out-dir>` |
 
