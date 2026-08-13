@@ -1,0 +1,57 @@
+# yaml-language-server: $schema=../../../blueprints/schema.json
+name: firehose
+description: Performance-showcase SPA — a 50,000-event log explorer that stays responsive while filtering, via windowed rendering, concurrent-React filtering, and a code-split inspector
+version: 2
+
+stack:
+  type: spa
+
+execution: auto
+
+# The three wave-0 features compose ONE page but declare disjoint touches, so
+# the planner runs them in parallel. The shell owns everything shared: the
+# dataset, the filter/selection store, the page skeleton, and the one shared
+# dependency install (@tanstack/react-virtual) — shared entries build alone,
+# so touching package.json there is collision-free.
+
+shared:
+  - name: firehose-shell
+    description: The / route and page composing three mount stubs (EventStream at src/features/stream/EventStream.tsx, FilterBar at src/features/filter/FilterBar.tsx, Inspector at src/features/inspector/InspectorPanel.tsx); a deterministic 50,000-event dataset module at src/data/events.ts (seeded PRNG — no network, stable across runs, ~6 severity/service/message fields per event); a useSyncExternalStore-based app store at src/store/explorer.ts holding filter text, severity facets, and selected event id, with a memoized filtered-events selector; and the @tanstack/react-virtual dependency install (per skills/frontend/performance.md)
+    skills: [routing, state-management, react-component, performance]
+
+pages:
+  - path: /
+    description: The explorer — filter bar on top, windowed event stream on the left, lazy-loaded inspector panel on the right
+    auth: false
+    features:
+      - scroll 50k events smoothly (windowed — bounded DOM)
+      - type-ahead filter + severity facets that never block typing
+      - click an event to inspect it in a code-split panel
+
+features:
+  - name: event-stream
+    description: The windowed event list — @tanstack/react-virtual over the store's filtered events, fixed-height rows, severity-colored, row click selects into the store; the DOM must hold only the visible window (~bounded rows) no matter the dataset size, and that bound is asserted in this feature's tests
+    skills: [performance, react-hooks, react-component, styling]
+    touches:
+      modify: [src/features/stream/EventStream.tsx]
+      create: [src/features/stream/EventStream.test.tsx, src/features/stream/EventRow.tsx]
+
+  - name: event-filter
+    description: The filter bar — text input filtering message/service via useDeferredValue (typing never blocks; stale results render dimmed via the deferred flag), severity facet toggles wrapped in useTransition, and a live result count with an aria-live region
+    skills: [concurrent-react, react-hooks, forms, react-component, styling, accessibility]
+    touches:
+      modify: [src/features/filter/FilterBar.tsx]
+      create: [src/features/filter/FilterBar.test.tsx]
+
+  - name: inspector
+    description: The inspector panel — React.lazy + Suspense code-split module showing the selected event's full detail (formatted payload, severity, relative + absolute time); must be a separate build chunk, with a skeleton fallback sized to prevent layout shift
+    skills: [performance, react-component, styling, accessibility]
+    touches:
+      modify: [src/features/inspector/InspectorPanel.tsx]
+      create:
+        - src/features/inspector/InspectorDetail.tsx
+        - src/features/inspector/InspectorPanel.test.tsx
+
+  - name: tests
+    description: Page-level performance-behavior tests — windowing proof (DOM row count stays bounded with the full 50k dataset), filter-to-stream integration, facet + text filter composition, inspector lazy mount on selection; plus a production-build assertion that the inspector is a separate chunk
+    skills: [react-testing, performance]

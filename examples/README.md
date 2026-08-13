@@ -21,3 +21,4 @@ blueprints organized by app type:
 - `notes-api.yaml` — standalone API (Hono)
 - `saas-platform.yaml` — full v2 (tenancy + RBAC + integrations + jobs)
 - `webhook-integration.yaml` — inbound webhook patterns
+- [`built/firehose/`](built/firehose/) — the performance reference: 50k-event explorer (windowing, concurrent filtering, code splitting), built in a 3-worker parallel wave and tuned by the React Performance Auditor's first live dispatch (−42% bundle)
