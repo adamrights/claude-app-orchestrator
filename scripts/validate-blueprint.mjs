@@ -734,6 +734,17 @@ if (doc && isPlainObject(doc)) {
   const isV2 = doc.version === 2;
   if (isV2) {
     validateV2(doc);
+  } else {
+    // A v1 blueprint declaring v2 sections is a trap: the orchestrator's v1
+    // shim SKIPS these sections entirely, so features silently lose the
+    // shared primitives / integrations / jobs they depend on. (Hit live in
+    // dogfood #47 — a shared: section was ignored by the letter of the shim.)
+    const V2_SECTIONS = ['integrations', 'jobs', 'webhooks', 'tenancy', 'rbac', 'flags', 'shared', 'config'];
+    for (const section of V2_SECTIONS) {
+      if (section in doc && doc[section] !== null) {
+        pushError(lineOf(doc, section), `'${section}' is a v2 section but the blueprint has no 'version: 2' — the build would silently skip it. Add 'version: 2'.`);
+      }
+    }
   }
 }
 

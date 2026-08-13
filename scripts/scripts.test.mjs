@@ -74,6 +74,14 @@ test('validator: depends_on referencing an unknown feature exits 1', () => {
   assert.match(r.stdout + r.stderr, /unknown feature 'ghost'/);
 });
 
+test('validator: v2 sections without version: 2 are an error, not silently skipped', () => {
+  const r = validate(
+    'name: x\ndescription: d\nstack:\n  type: spa\nshared:\n  - name: shell\n    description: d\n    skills: [routing]\nfeatures:\n  - name: f\n    description: d\n    skills: [styling]\n',
+  );
+  assert.equal(r.status, 1);
+  assert.match(r.stdout + r.stderr, /'shared' is a v2 section .* no 'version: 2'/);
+});
+
 test('validator: flow-style feature entries parse (regression: used to misparse)', () => {
   const r = validate(
     'name: x\ndescription: d\nstack: {type: spa}\nfeatures:\n  - {name: a, description: d, skills: [styling], depends_on: [b]}\n  - {name: b, description: d, skills: [styling]}\n',
