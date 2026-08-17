@@ -33,6 +33,10 @@ cannot function without one).
 - Use the `@/` path alias for imports from `src/`
 - Co-locate tests as `*.test.tsx` next to source files
 
+## Trimming for data-less apps
+
+The template ships TanStack Query, the zod env validator, and React Router because most SPAs need them — but an app with no server and one route pays ~41 kB gzip for the set. If that's you, the firehose reference's audit commits are the recipe: drop the QueryClientProvider + dependency, stop importing `@/env` at boot when the client schema is empty, and replace the router with direct rendering when there's a single static route. Measure before/after each removal (`npm run build`).
+
 ## Path Alias
 - `@/components/Button` → `src/components/Button`
 

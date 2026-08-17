@@ -77,6 +77,9 @@ It validates the blueprint, applies the dependency rules (explicit `depends_on`,
 
 ### Step 2: Review the plan
 
+**Pages coverage check** (the planner doesn't do this): every `pages[].path` in the blueprint must be claimed by at least one `shared:` entry or feature description. An unclaimed page would silently never be built — list any, and ask the user whether to fold each into an existing feature or add one, before proceeding.
+
+
 - `mode: sequential` — proceed with Sequential Mode in Phase 2; tell the user which reason forced it (cycle, safety check, or explicit).
 - `mode: parallel` — use the `waves` arrays as-is.
 - **Judgment stays with you**: if two same-wave features' pre-approved manifests would collide on a Shared Resource Registry file the planner couldn't see (no `touches:` declared in the blueprint), either serialize them yourself or plan for Phase 2.5 arbitration — and say which you chose.
@@ -268,7 +271,7 @@ For each agent you spawn:
 
 4. If the wave has 2+ agents, set `run_in_background: true` so they execute in parallel. You will be notified when each completes.
 
-5. **Wait for ALL agents in the wave to complete** before moving on. Do not poll — Claude Code notifies you when background agents finish.
+5. **Wait for ALL agents in the wave to complete** before moving on. Don't poll for their *results* — completion notifications arrive on their own — but stall-watching is your duty, and heartbeats are the sanctioned channel: every few minutes, tail each running worker's `<worktree>/.claude-progress.log`. A worker with no new line for 5+ minutes AND no announced long command is stalled: mark its unit `failed` in the Build Map, abandon its branch, and decide retry vs. sequential fallback. Never kill a worker mid-announced-install.
 
 #### Step 2: Layer-level split (for splittable features)
 
@@ -341,7 +344,7 @@ For each completed worktree, in declaration order:
 
    When the table says **ABORT**, stop merging, leave the worktrees untouched, and ask the user how to resolve. Do not fall back to "prefer the version from the feature listed first" — that rule is retired because it silently drops work.
 4. After merging, run `npm test`. If tests fail, apply Fullstack Debugger workflow before merging the next worktree.
-5. Clean up the worktree: the Agent tool's `isolation: worktree` mode handles this automatically when the agent exits, but verify with `git worktree list`.
+5. Clean up the worktree explicitly — these are manual worktrees on the output repo, so nothing is automatic: `git -C {output_dir} worktree remove ../wt-{feature} --force`, then `git branch -d feat/{feature}` after the merge. Verify with `git worktree list`.
 
 #### Step 4: Wave commit
 
@@ -469,7 +472,7 @@ decisions:                 # every decision made after the blueprint was frozen
     date: 2026-08-10T17:20:00Z
 ```
 
-Unit statuses: `pending | in-progress | done | failed | blocked-on-decision | skipped`. Unit keys are `{kind}:{name}` with kinds `scaffold`, `integration`, `shared`, `rbac`, `feature`, `wave-merge`, `job`, `webhook`, `review`.
+Unit statuses: `pending | in-progress | done | failed | blocked-on-decision | skipped`. Unit keys are `{kind}:{name}` with kinds `scaffold`, `integration`, `shared`, `rbac`, `feature`, `wave-merge`, `job`, `webhook`, `review`, `audit` (e.g. `audit:performance` for a post-review auditor pass).
 
 ### Write cadence
 
